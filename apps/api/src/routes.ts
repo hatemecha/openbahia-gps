@@ -39,7 +39,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     reply.header('X-Content-Type-Options', 'nosniff');
     reply.header('X-Frame-Options', 'DENY');
     reply.header('Referrer-Policy', 'no-referrer');
-    reply.header('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+    reply.header('Permissions-Policy', 'camera=(), microphone=()');
     reply.header('X-Request-Id', request.id);
     if (request.url.startsWith('/api/vehicles') || request.url.startsWith('/api/realtime/')) {
       if (!limiter.allow(clientKey(request))) {
@@ -228,8 +228,16 @@ async function openSse(
   });
   reply.raw.write(': connected\n\n');
 
+  let closed = false;
   const write = (payload: unknown) => {
-    reply.raw.write(`event: vehicles\ndata: ${JSON.stringify(payload)}\n\n`);
+    if (closed || reply.raw.writableEnded || reply.raw.destroyed) {
+      return;
+    }
+    try {
+      reply.raw.write(`event: vehicles\ndata: ${JSON.stringify(payload)}\n\n`);
+    } catch {
+      closed = true;
+    }
   };
 
   const unsubscribe = app.hub.subscribe((payload) => {
@@ -237,13 +245,29 @@ async function openSse(
   }, lineId);
 
   const heartbeat = setInterval(() => {
-    reply.raw.write(`event: ping\ndata: ${Date.now()}\n\n`);
+    if (closed || reply.raw.writableEnded || reply.raw.destroyed) {
+      return;
+    }
+    try {
+      reply.raw.write(`event: ping\ndata: ${Date.now()}\n\n`);
+    } catch {
+      closed = true;
+    }
   }, 15_000);
   heartbeat.unref?.();
 
-  request.raw.on('close', () => {
+  let released = false;
+  const release = () => {
+    if (released) {
+      return;
+    }
+    released = true;
+    closed = true;
     clearInterval(heartbeat);
     unsubscribe();
     onClose();
-  });
+  };
+
+  request.raw.on('close', release);
+  request.raw.on('error', release);
 }

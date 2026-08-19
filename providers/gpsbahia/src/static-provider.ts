@@ -18,6 +18,10 @@ export class GpsBahiaStaticProvider implements StaticTransitProvider {
   private routes: TransitRoute[] = [];
   private stops: TransitStop[] = [];
   private lines: TransitLine[] = [];
+  private routesReady = false;
+  private stopsReady = false;
+  private routesLoad: Promise<void> | null = null;
+  private stopsLoad: Promise<void> | null = null;
 
   constructor(options: GpsBahiaStaticProviderOptions = {}) {
     this.baseUrl = (options.baseUrl ?? 'https://www.gpsbahia.com.ar/').replace(/\/?$/, '/');
@@ -32,36 +36,47 @@ export class GpsBahiaStaticProvider implements StaticTransitProvider {
       });
   }
 
+  async ensureRoutes(): Promise<void> {
+    if (this.routesReady) {
+      return;
+    }
+    if (!this.routesLoad) {
+      this.routesLoad = this.loadRoutesInternal();
+    }
+    await this.routesLoad;
+  }
+
+  async ensureStops(): Promise<void> {
+    await this.ensureRoutes();
+    if (this.stopsReady) {
+      return;
+    }
+    if (!this.stopsLoad) {
+      this.stopsLoad = this.loadStopsInternal();
+    }
+    await this.stopsLoad;
+  }
+
+  /** @deprecated Prefer ensureRoutes/ensureStops; kept for compatibility */
   async load(): Promise<void> {
-    const homepage = await this.session.fetchHomepage();
-    this.routes = parseGpsBahiaRoutes(homepage.html);
-    this.lines = parseGpsBahiaLinesFromHtml(homepage.html).map((line) => ({
-      ...line,
-      hasRoutes: this.routes.some((route) => route.lineId === line.id),
-      hasRealtime: true,
-    }));
-    const paradas = await this.fetchParadas();
-    this.stops = parseGpsBahiaStops(paradas, this.routes);
+    await this.ensureRoutes();
+    await this.ensureStops();
   }
 
   async getLines(): Promise<TransitLine[]> {
-    if (this.lines.length === 0) {
-      await this.load();
-    }
+    await this.ensureRoutes();
     return this.lines;
   }
 
   async getRoutes(options?: { lineId?: string }): Promise<TransitRoute[]> {
-    if (this.routes.length === 0) {
-      await this.load();
-    }
-    return options?.lineId ? this.routes.filter((route) => route.lineId === options.lineId) : this.routes;
+    await this.ensureRoutes();
+    return options?.lineId
+      ? this.routes.filter((route) => route.lineId === options.lineId)
+      : this.routes;
   }
 
   async getStops(options?: { lineId?: string; routeId?: string }): Promise<TransitStop[]> {
-    if (this.stops.length === 0) {
-      await this.load();
-    }
+    await this.ensureStops();
     const routeIds = new Set(
       (options?.lineId ? this.routes.filter((route) => route.lineId === options.lineId) : this.routes)
         .filter((route) => (options?.routeId ? route.id === options.routeId : true))
@@ -74,6 +89,27 @@ export class GpsBahiaStaticProvider implements StaticTransitProvider {
       return this.stops.filter((stop) => stop.routeIds.some((id) => routeIds.has(id)));
     }
     return this.stops;
+  }
+
+  private async loadRoutesInternal(): Promise<void> {
+    const homepage = await this.session.fetchHomepage();
+    this.routes = parseGpsBahiaRoutes(homepage.html);
+    this.lines = parseGpsBahiaLinesFromHtml(homepage.html).map((line) => ({
+      ...line,
+      hasRoutes: this.routes.some((route) => route.lineId === line.id),
+      hasRealtime: true,
+    }));
+    this.routesReady = true;
+  }
+
+  private async loadStopsInternal(): Promise<void> {
+    try {
+      const paradas = await this.fetchParadas();
+      this.stops = parseGpsBahiaStops(paradas, this.routes);
+    } catch {
+      this.stops = [];
+    }
+    this.stopsReady = true;
   }
 
   private async fetchParadas(): Promise<unknown> {

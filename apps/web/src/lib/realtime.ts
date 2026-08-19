@@ -5,6 +5,14 @@ export interface RealtimeHandlers {
   onStatus?: (kind: 'sse' | 'poll' | 'error') => void;
 }
 
+function isVehiclesResponse(value: unknown): value is VehiclesResponse {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return Array.isArray(record.data) && record.meta !== null && typeof record.meta === 'object';
+}
+
 export function connectRealtime(
   url: string,
   poll: () => Promise<VehiclesResponse>,
@@ -16,6 +24,7 @@ export function connectRealtime(
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let attempt = 0;
   let stopped = false;
+  let generation = 0;
 
   const clearTimers = () => {
     if (pollTimer) {
@@ -28,13 +37,27 @@ export function connectRealtime(
     }
   };
 
+  const deliver = (payload: VehiclesResponse) => {
+    if (stopped) {
+      return;
+    }
+    handlers.onPayload(payload);
+  };
+
   const pollOnce = () => {
+    const gen = generation;
     void poll()
       .then((payload) => {
-        handlers.onPayload(payload);
+        if (stopped || gen !== generation) {
+          return;
+        }
+        deliver(payload);
         handlers.onStatus?.('poll');
       })
       .catch(() => {
+        if (stopped || gen !== generation) {
+          return;
+        }
         handlers.onStatus?.('error');
       });
   };
@@ -43,15 +66,31 @@ export function connectRealtime(
     if (stopped) {
       return;
     }
+    const gen = generation;
     eventSource?.close();
     try {
       eventSource = new EventSource(url);
       eventSource.addEventListener('vehicles', (event) => {
-        attempt = 0;
-        handlers.onPayload(JSON.parse(event.data) as VehiclesResponse);
-        handlers.onStatus?.('sse');
+        if (stopped || gen !== generation) {
+          return;
+        }
+        try {
+          const parsed = JSON.parse(String(event.data)) as unknown;
+          if (!isVehiclesResponse(parsed)) {
+            handlers.onStatus?.('error');
+            return;
+          }
+          attempt = 0;
+          deliver(parsed);
+          handlers.onStatus?.('sse');
+        } catch {
+          handlers.onStatus?.('error');
+        }
       });
       eventSource.onerror = () => {
+        if (stopped || gen !== generation) {
+          return;
+        }
         eventSource?.close();
         eventSource = undefined;
         handlers.onStatus?.('error');
@@ -83,9 +122,11 @@ export function connectRealtime(
   connect();
 
   return () => {
+    generation += 1;
     stopped = true;
     document.removeEventListener('visibilitychange', onVisibility);
     eventSource?.close();
+    eventSource = undefined;
     clearTimers();
   };
 }

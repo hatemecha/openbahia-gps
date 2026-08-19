@@ -129,6 +129,10 @@ export function parseTransitStops(input: unknown) {
   return z.array(transitStopSchema).safeParse(input);
 }
 
+export function parseTransitLines(input: unknown) {
+  return z.array(transitLineSchema).safeParse(input);
+}
+
 export function normalizeBearing(value: number): number | undefined {
   if (!Number.isFinite(value)) {
     return undefined;

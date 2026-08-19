@@ -1,5 +1,5 @@
 export class MemoryRateLimit {
-  private readonly hits = new Map<string, number[]>();
+  private readonly hits = new Map<string, { count: number; resetAt: number }>();
   private readonly connections = new Map<string, number>();
 
   constructor(
@@ -10,13 +10,16 @@ export class MemoryRateLimit {
 
   allow(key: string): boolean {
     const now = Date.now();
-    const recent = (this.hits.get(key) ?? []).filter((stamp) => now - stamp < this.windowMs);
-    if (recent.length >= this.maxHits) {
-      this.hits.set(key, recent);
+    this.prune(now);
+    const entry = this.hits.get(key);
+    if (!entry || entry.resetAt <= now) {
+      this.hits.set(key, { count: 1, resetAt: now + this.windowMs });
+      return true;
+    }
+    if (entry.count >= this.maxHits) {
       return false;
     }
-    recent.push(now);
-    this.hits.set(key, recent);
+    entry.count += 1;
     return true;
   }
 
@@ -31,7 +34,20 @@ export class MemoryRateLimit {
 
   releaseSse(key: string): void {
     const current = this.connections.get(key) ?? 0;
-    this.connections.set(key, Math.max(0, current - 1));
+    const next = Math.max(0, current - 1);
+    if (next === 0) {
+      this.connections.delete(key);
+      return;
+    }
+    this.connections.set(key, next);
+  }
+
+  private prune(now: number): void {
+    for (const [key, entry] of this.hits) {
+      if (entry.resetAt <= now) {
+        this.hits.delete(key);
+      }
+    }
   }
 }
 

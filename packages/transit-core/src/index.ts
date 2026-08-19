@@ -32,6 +32,7 @@ export {
   isValidLongitude,
   nextStopHintSchema,
   normalizeBearing,
+  parseTransitLines,
   parseTransitRoutes,
   parseTransitStops,
   parseVehiclePosition,

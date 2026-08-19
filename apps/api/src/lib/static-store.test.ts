@@ -80,4 +80,25 @@ describe('StaticStore', () => {
     const dataset = await store.load();
     expect(dataset.metadata.source).toBe('gpsbus');
   });
+
+  it('keeps routes when stops provider fails', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ob-static-'));
+    const failingStops: StaticTransitProvider = {
+      id: 'gpsbahia',
+      async getLines(): Promise<TransitLine[]> {
+        return [{ id: '503', name: '503' }];
+      },
+      async getRoutes(): Promise<TransitRoute[]> {
+        return [route];
+      },
+      async getStops(): Promise<TransitStop[]> {
+        throw new Error('paradas down');
+      },
+    };
+    const store = new StaticStore({ cacheDir: dir, providers: [failingStops] });
+    const dataset = await store.load();
+    expect(dataset.routes).toHaveLength(1);
+    expect(dataset.stops).toEqual([]);
+    expect(store.getStaticDataState()).toBe('partial');
+  });
 });

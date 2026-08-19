@@ -47,6 +47,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     refreshMs: options.config.realtimeRefreshMs,
     idleTtlMs: options.config.realtimeIdleTtlMs,
     maxActiveLines: options.config.realtimeMaxActiveLines,
+    maxConcurrentRequests: options.config.realtimeMaxConcurrentRequests,
     freshness: options.config.freshness,
     logger: app.log,
     staticStore,
@@ -80,7 +81,21 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   app.addHook('onReady', async () => {
     app.log.info({ provider: options.provider.id }, 'provider activated');
-    await staticStore.load();
+    const hadCache = await staticStore.loadFromCache();
+    app.log.info(
+      { hadCache, staticState: staticStore.getStaticDataState() },
+      'static dataset bootstrapped from disk',
+    );
+    if (!hadCache) {
+      await staticStore.refresh();
+    } else {
+      void staticStore.refresh().catch((error) => {
+        app.log.warn(
+          { err: error instanceof Error ? error.message : 'error' },
+          'static background refresh failed',
+        );
+      });
+    }
     await hub.primeCatalog();
     if (options.startPolling !== false) {
       hub.start();

@@ -86,18 +86,24 @@
       .join(','),
   );
 
-  function markerHtml(vehicle: VehiclePosition, selected: boolean): string {
+  function createMarkerElement(vehicle: VehiclePosition, selected: boolean): HTMLButtonElement {
     const label = vehicle.lineId ?? vehicle.routeId ?? '—';
     const dir = markerDirectionClass(vehicle.direction);
-    const dirLabel = directionSpokenLabel(vehicle.direction);
-    return `<button type="button" class="bus-marker ${dir} ${selected ? 'selected' : ''}" aria-label="Colectivo ${label} ${dirLabel} unidad ${vehicle.vehicleId}"><span class="bus-dot">${label}</span></button>`;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `bus-marker ${dir}${selected ? ' selected' : ''}`;
+    button.setAttribute(
+      'aria-label',
+      `Colectivo ${label} ${directionSpokenLabel(vehicle.direction)} unidad ${vehicle.vehicleId}`,
+    );
+    const dot = document.createElement('span');
+    dot.className = 'bus-dot';
+    dot.textContent = label;
+    button.append(dot);
+    return button;
   }
 
   function paintMarker(el: HTMLElement, vehicle: VehiclePosition, selected: boolean): void {
-    const next = markerHtml(vehicle, selected);
-    if (el.outerHTML === next) {
-      return;
-    }
     const dir = markerDirectionClass(vehicle.direction);
     el.className = `bus-marker ${dir}${selected ? ' selected' : ''}`;
     el.setAttribute(
@@ -195,9 +201,28 @@
     });
   }
 
+  function needsAnimationFrame(): boolean {
+    if (followVehicleId) {
+      return true;
+    }
+    const now = performance.now();
+    for (const item of animated.values()) {
+      if (!item.skipInterpolation && now - item.startedAt < item.durationMs) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function scheduleFrame() {
+    if (!raf && map && maplibre) {
+      raf = requestAnimationFrame(renderFrame);
+    }
+  }
+
   function renderFrame() {
     if (!map || !maplibre || document.hidden) {
-      raf = requestAnimationFrame(renderFrame);
+      raf = 0;
       return;
     }
     const seen = new Set<string>();
@@ -213,9 +238,7 @@
       const selected = item.vehicleId === selectedVehicleId;
       if (!marker) {
         const vehicleId = item.vehicleId;
-        const el = document.createElement('div');
-        el.innerHTML = markerHtml(item.vehicle, selected);
-        const node = el.firstElementChild as HTMLElement;
+        const node = createMarkerElement(item.vehicle, selected);
         node.addEventListener('click', (event) => {
           event.stopPropagation();
           const current = animated.get(vehicleId);
@@ -244,7 +267,7 @@
         animated.delete(id);
       }
     }
-    raf = requestAnimationFrame(renderFrame);
+    raf = needsAnimationFrame() ? requestAnimationFrame(renderFrame) : 0;
   }
 
   $effect(() => {
@@ -257,6 +280,7 @@
         animated.delete(id);
       }
     }
+    scheduleFrame();
   });
 
   $effect(() => {
@@ -293,8 +317,10 @@
         attributionControl: { compact: true },
         fadeDuration: reducedMotion ? 0 : 300,
       });
-      map.on('error', () => {
-        mapFailed = true;
+      map.on('error', (event) => {
+        if (import.meta.env.DEV) {
+          console.debug('map recoverable error', event.error?.message ?? event);
+        }
       });
       map.on('load', () => {
         if (!map) {
@@ -434,7 +460,7 @@
         },
         fitLine: () => fitRoutes(),
       };
-      raf = requestAnimationFrame(renderFrame);
+      scheduleFrame();
     } catch {
       mapFailed = true;
     }

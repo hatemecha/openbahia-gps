@@ -8,7 +8,7 @@
   import ZoomIn from 'lucide-svelte/icons/zoom-in';
   import ZoomOut from 'lucide-svelte/icons/zoom-out';
   import TransitMap from '$lib/components/TransitMap.svelte';
-  import { fetchLines, fetchRoutes, fetchStops, fetchVehicles, realtimeUrl } from '$lib/api';
+  import { fetchLines, fetchVehicles, realtimeUrl } from '$lib/api';
   import { COPY, routeMatchLabel } from '$lib/copy';
   import { isDirectionVisible } from '$lib/direction-visibility';
   import {
@@ -21,6 +21,7 @@
   import { requestClientLocation } from '$lib/location';
   import { loadPrefs, savePrefs } from '$lib/prefs';
   import { connectRealtime } from '$lib/realtime';
+  import { createLineSession } from '$lib/state/line-session';
   import type {
     ConnectionState,
     MapControls,
@@ -56,7 +57,11 @@
   let reducedMotion = $state(false);
   let panel: HTMLDialogElement | undefined = $state();
   let lastFocused: HTMLElement | null = null;
-  let askedLocation = false;
+  let stopsUnavailable = $state(false);
+  let showVehicleList = $state(false);
+  let realtimeGeneration = $state(0);
+
+  const lineSession = createLineSession();
 
   const feedState: ConnectionState = $derived(meta?.connectionState ?? 'unavailable');
   const realtimeState = $derived(meta?.realtimeState);
@@ -115,7 +120,10 @@
   });
   const matchNote = $derived(routeMatchLabel(selectedLive?.routeMatchState));
 
-  function applyPayload(payload: { data: VehiclePosition[]; meta: VehiclesMeta }) {
+  function applyPayload(payload: { data: VehiclePosition[]; meta: VehiclesMeta }, gen: number) {
+    if (!lineSession.isRealtimeGeneration(gen)) {
+      return;
+    }
     vehicles = payload.data;
     meta = payload.meta;
     loadingSince = null;
@@ -140,24 +148,14 @@
     }
   }
 
-  async function loadStatic(selectedLine: string) {
-    try {
-      const [routeRes, stopRes] = await Promise.all([
-        fetchRoutes(selectedLine),
-        fetchStops(selectedLine),
-      ]);
-      routes = routeRes.data;
-      stops = stopRes.data;
-    } catch {
-      routes = routes.filter((route) => route.lineId === selectedLine);
-      stops = stops;
-    }
-  }
-
   async function pollOnce(selectedLine: string) {
+    const gen = realtimeGeneration;
     try {
-      applyPayload(await fetchVehicles(selectedLine));
+      applyPayload(await fetchVehicles(selectedLine), gen);
     } catch {
+      if (!lineSession.isRealtimeGeneration(gen)) {
+        return;
+      }
       loadFailed = vehicles.length === 0;
       meta = {
         provider: meta?.provider ?? 'unknown',
@@ -222,13 +220,6 @@
     locationNote = result.reason === 'denied' ? COPY.location_denied : COPY.location_unavailable;
   }
 
-  async function locateOnLoad() {
-    const result = await requestClientLocation();
-    if (result.ok) {
-      flyIfInCity(result.longitude, result.latitude);
-    }
-  }
-
   onMount(() => {
     debug = new URLSearchParams(window.location.search).has('debug');
     reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -272,19 +263,18 @@
   });
 
   $effect(() => {
-    if (!browser || !mapControls || askedLocation) {
-      return;
-    }
-    askedLocation = true;
-    void locateOnLoad();
-  });
-
-  $effect(() => {
     if (!browser || !ready) {
       return;
     }
     const selectedLine = lineId;
-    void loadStatic(selectedLine);
+    routes = [];
+    stops = [];
+    stopsUnavailable = false;
+    void lineSession.loadStatic(selectedLine, (state) => {
+      routes = state.routes;
+      stops = state.stops;
+      stopsUnavailable = state.stopsUnavailable;
+    });
   });
 
   $effect(() => {
@@ -296,28 +286,39 @@
     selectedStop = null;
     follow = false;
     followPaused = false;
+    showVehicleList = false;
     panel?.close();
     loadingSince = Date.now();
     loadFailed = false;
     vehicles = [];
     meta = null;
-    return connectRealtime(
-      realtimeUrl(selectedLine),
-      () => fetchVehicles(selectedLine),
-      {
-        onPayload: applyPayload,
-        onStatus: (kind) => {
-          if (kind === 'error' && vehicles.length === 0) {
-            loadFailed = Date.now() - (loadingSince ?? Date.now()) > 20_000;
-          }
-        },
+    lineSession.resetRealtime(
+      (gen) =>
+        connectRealtime(
+          realtimeUrl(selectedLine),
+          () => fetchVehicles(selectedLine),
+          {
+            onPayload: (payload) => applyPayload(payload, gen),
+            onStatus: (kind) => {
+              if (!lineSession.isRealtimeGeneration(gen)) {
+                return;
+              }
+              if (kind === 'error' && vehicles.length === 0) {
+                loadFailed = Date.now() - (loadingSince ?? Date.now()) > 20_000;
+              }
+            },
+          },
+          { hidden: () => document.hidden },
+        ),
+      (gen) => {
+        realtimeGeneration = gen;
       },
-      { hidden: () => document.hidden },
     );
   });
 
   onDestroy(() => {
     ready = false;
+    lineSession.destroy();
   });
 </script>
 
@@ -343,6 +344,11 @@
         </select>
       </label>
     </div>
+    <p class="status-line" aria-live="polite">
+      {liveStatus} · {visibleVehicles.length} colectivos · {newest
+        ? formatAge(newest, now)
+        : COPY.starting}
+    </p>
     <p class="visually-hidden" aria-live="polite" aria-atomic="true">
       {liveStatus}. {visibleVehicles.length} colectivos. {newest
         ? formatAge(newest, now)
@@ -446,6 +452,36 @@
             </button>
           {/if}
         </div>
+        {#if stopsUnavailable && routes.length > 0}
+          <p class="hint">{COPY.stops_unavailable}</p>
+        {/if}
+        {#if visibleVehicles.length > 0}
+          <button
+            class="touch-btn"
+            type="button"
+            aria-expanded={showVehicleList}
+            onclick={() => (showVehicleList = !showVehicleList)}
+          >
+            Ver colectivos de esta línea ({visibleVehicles.length})
+          </button>
+        {/if}
+        {#if showVehicleList && visibleVehicles.length > 0}
+          <ul class="vehicle-list">
+            {#each visibleVehicles as vehicle (vehicle.vehicleId)}
+              <li>
+                <button
+                  type="button"
+                  onclick={(event) => openVehicle(vehicle, event.currentTarget)}
+                >
+                  {vehicleHeading(vehicle)} · {vehicle.vehicleId} · {formatAge(
+                    vehicle.observedAt,
+                    now,
+                  )}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
         {#if previousLineId}
           <button
             class="touch-btn"

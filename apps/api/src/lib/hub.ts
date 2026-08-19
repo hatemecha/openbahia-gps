@@ -25,6 +25,7 @@ import {
 } from '@openbahia/transit-core';
 import type { FastifyBaseLogger } from 'fastify';
 import type { StaticStore } from './static-store.js';
+import { UpstreamScheduler } from './upstream-scheduler.js';
 
 export interface VehiclesEnvelope {
   data: VehiclePosition[];
@@ -65,6 +66,7 @@ interface HubOptions {
   staticStore?: StaticStore;
   sessionRefreshCount?: () => number;
   circuitBreaker?: CircuitBreaker;
+  maxConcurrentRequests?: number;
 }
 
 type Listener = (payload: VehiclesEnvelope) => void;
@@ -108,6 +110,7 @@ export class VehicleHub {
   private readonly lastSeen = new Map<string, { vehicle: VehiclePosition; at: number }>();
   private readonly lastGood = new Map<string, { point: { latitude: number; longitude: number }; at: number }>();
   private readonly breaker: CircuitBreaker;
+  private readonly scheduler: UpstreamScheduler;
   private lines: TransitLine[] = [];
   private focusedLineId = '503';
   private started = false;
@@ -123,6 +126,7 @@ export class VehicleHub {
 
   constructor(private readonly options: HubOptions) {
     this.breaker = options.circuitBreaker ?? new CircuitBreaker({ failureThreshold: 4, cooldownMs: 30_000 });
+    this.scheduler = new UpstreamScheduler(options.maxConcurrentRequests ?? 2);
   }
 
   start(): void {
@@ -366,32 +370,34 @@ export class VehicleHub {
     }
     this.metrics.upstreamRequests += 1;
     try {
-      this.lines = await this.resolveLines();
-      const vehicles = await provider.getVehicles({ routeId: lineId, lineId });
-      const parsed = parseVehiclePositions(vehicles);
-      const enriched = parsed.success ? this.enrich(lineId, parsed.data) : [];
-      if (!parsed.success) {
-        this.options.logger.warn({ lineId }, 'upstream vehicles failed schema validation');
-      }
-      slot.vehicles = enriched;
-      slot.available = true;
-      slot.refreshFailed = false;
-      slot.reason = undefined;
-      slot.lastSuccessfulUpdate = new Date().toISOString();
-      slot.consecutiveErrors = 0;
-      slot.nextRefreshAt = Date.now() + this.options.refreshMs;
-      this.breaker.success();
-      this.metrics.upstreamSuccess += 1;
-      this.options.logger.info(
-        {
-          provider: provider.id,
-          count: slot.vehicles.length,
-          lineId,
-          latencyMs: Date.now() - started,
-        },
-        'refresh successful',
-      );
-      this.emit(lineId);
+      await this.scheduler.enqueue(async () => {
+        this.lines = await this.resolveLines();
+        const vehicles = await provider.getVehicles({ routeId: lineId, lineId });
+        const parsed = parseVehiclePositions(vehicles);
+        const enriched = parsed.success ? this.enrich(lineId, parsed.data) : [];
+        if (!parsed.success) {
+          this.options.logger.warn({ lineId }, 'upstream vehicles failed schema validation');
+        }
+        slot.vehicles = enriched;
+        slot.available = true;
+        slot.refreshFailed = false;
+        slot.reason = undefined;
+        slot.lastSuccessfulUpdate = new Date().toISOString();
+        slot.consecutiveErrors = 0;
+        slot.nextRefreshAt = Date.now() + this.options.refreshMs;
+        this.breaker.success();
+        this.metrics.upstreamSuccess += 1;
+        this.options.logger.debug(
+          {
+            provider: provider.id,
+            count: slot.vehicles.length,
+            lineId,
+            latencyMs: Date.now() - started,
+          },
+          'refresh successful',
+        );
+        this.emit(lineId);
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'external error';
       slot.consecutiveErrors += 1;
@@ -577,6 +583,14 @@ export class VehicleHub {
       clearTimeout(victim.timer);
       victim.timer = null;
     }
+    this.slots.delete(victim.lineId);
+  }
+
+  getSchedulerStats(): { active: number; queued: number } {
+    return {
+      active: this.scheduler.getActiveCount(),
+      queued: this.scheduler.getQueueLength(),
+    };
   }
 }
 

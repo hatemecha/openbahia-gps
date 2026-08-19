@@ -14,6 +14,7 @@ export interface AppConfig {
   realtimeRefreshMs: number;
   realtimeIdleTtlMs: number;
   realtimeMaxActiveLines: number;
+  realtimeMaxConcurrentRequests: number;
   freshness: FreshnessConfig;
   publicApiUrl: string;
   gpsbahiaBaseUrl: string;
@@ -98,6 +99,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     realtimeRefreshMs: readOptionalNumber('REALTIME_REFRESH_MS', 10_000, env, 1_000),
     realtimeIdleTtlMs: readOptionalNumber('REALTIME_IDLE_TTL_MS', 120_000, env, 1_000),
     realtimeMaxActiveLines: Math.floor(readOptionalNumber('REALTIME_MAX_ACTIVE_LINES', 8, env, 1)),
+    realtimeMaxConcurrentRequests: Math.floor(
+      readOptionalNumber('REALTIME_MAX_CONCURRENT_REQUESTS', 2, env, 1),
+    ),
     freshness: {
       liveAfterMs,
       staleAfterMs,

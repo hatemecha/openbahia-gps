@@ -34,6 +34,7 @@ export const COPY = {
   no_vehicles: 'Ahora no hay colectivos de esta línea en el mapa.',
   no_routes: 'No tenemos el recorrido de esta línea.',
   no_stops: 'No hay paradas publicadas para esta línea.',
+  stops_unavailable: 'Paradas no disponibles por ahora.',
   offline: 'Sin conexión. Las ubicaciones en vivo no pueden actualizarse.',
   timeout: 'La consulta tardó demasiado.',
   invalid_line: 'Esa línea no está en el catálogo.',

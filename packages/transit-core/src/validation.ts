@@ -5,7 +5,7 @@ import { assertNever } from './types.js';
 export const GPS_FUTURE_SLACK_MS = 5 * 60_000;
 export const GPS_JUMP_METERS = 2_500;
 export const GPS_JUMP_WINDOW_MS = 20_000;
-export const STATIC_SCHEMA_VERSION = 1;
+export const STATIC_SCHEMA_VERSION = 2;
 export const LINE_ID_PATTERN = /^[0-9A-Za-z][0-9A-Za-z-]{0,31}$/;
 
 export function isPlausibleLineId(value: string): boolean {

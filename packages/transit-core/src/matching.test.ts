@@ -131,7 +131,7 @@ describe('route matching', () => {
     expect(match?.distanceFromRouteMeters).toBeLessThan(20);
   });
 
-  it('lets heading override a stale provider ida when the bus is on vuelta', () => {
+  it('keeps provider outbound when inbound polyline is closer', () => {
     const match = matchVehicleToRoutes(
       {
         latitude: -38.72015,
@@ -142,10 +142,39 @@ describe('route matching', () => {
       },
       [outbound, inbound],
     );
-    expect(match?.routeId).toBe('in');
-    expect(match?.direction).toBe('inbound');
-    expect(match?.assignmentSource).toBe('map-matching');
-    expect(shouldUseMatchedPosition(match)).toBe(true);
+    expect(match?.routeId).toBe('out');
+    expect(match?.direction).toBe('outbound');
+    expect(match?.assignmentSource).toBe('provider');
+  });
+
+  it('does not flip to inbound when provider says outbound but only inbound route exists', () => {
+    const match = matchVehicleToRoutes(
+      {
+        latitude: -38.72015,
+        longitude: -62.26,
+        bearing: 270,
+        direction: 'outbound',
+        routeAssignmentSource: 'provider',
+      },
+      [inbound],
+    );
+    expect(match).toBeNull();
+  });
+
+  it('does not let heading override provider ida when both polylines are candidates', () => {
+    const match = matchVehicleToRoutes(
+      {
+        latitude: -38.72015,
+        longitude: -62.26,
+        bearing: 270,
+        direction: 'outbound',
+        routeAssignmentSource: 'provider',
+      },
+      [outbound, inbound],
+    );
+    expect(match?.routeId).toBe('out');
+    expect(match?.direction).toBe('outbound');
+    expect(match?.assignmentSource).toBe('provider');
 
     const vehicle = {
       vehicleId: 'M-stale-ida',
@@ -165,7 +194,7 @@ describe('route matching', () => {
       routes: [outbound, inbound],
       stops: [],
     });
-    expect(enriched.direction).toBe('inbound');
+    expect(enriched.direction).toBe('outbound');
   });
 
   it('keeps drawing the snapped position under GPS noise once it was snapped', () => {

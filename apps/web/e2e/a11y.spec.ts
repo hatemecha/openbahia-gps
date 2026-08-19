@@ -8,10 +8,7 @@ test.describe('axe baseline', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'OpenBahía' })).toBeVisible();
     const results = await new AxeBuilder({ page }).withTags(tags).analyze();
-    const blocking = results.violations.filter(
-      (item) => item.impact === 'serious' || item.impact === 'critical',
-    );
-    expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
+    expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
 
   test('selected line and vehicle panel', async ({ page }) => {
@@ -21,9 +18,6 @@ test.describe('axe baseline', () => {
     await unit.click();
     await expect(page.getByRole('dialog')).toBeVisible();
     const results = await new AxeBuilder({ page }).withTags(tags).analyze();
-    const blocking = results.violations.filter(
-      (item) => item.impact === 'serious' || item.impact === 'critical',
-    );
-    expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
+    expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
 });

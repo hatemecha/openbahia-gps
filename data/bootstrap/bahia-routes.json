@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "source": "bahia-opendata",
+    "version": "1e96289b7fda",
+    "fetchedAt": "2026-01-01T00:00:00.000Z",
+    "checksum": "1e96289b7fda070f65318a32b54fa5bd5a8e8b565af0505da8a1cde97173961a",
+    "schemaVersion": 2,
+    "attribution": "Municipio de Bahía Blanca — datos abiertos"
+  },
+  "lines": [
+    {
+      "id": "500",
+      "name": "500",
+      "hasRoutes": true,
+      "hasRealtime": false
+    },
+    {
+      "id": "503",
+      "name": "503",
+      "hasRoutes": true,
+      "hasRealtime": false
+    }
+  ],
+  "routes": [
+    {
+      "id": "opendata-500-outbound-1",
+      "lineId": "500",
+      "name": "500 Ida",
+      "direction": "outbound",
+      "path": [
+        {
+          "latitude": -38.7183,
+          "longitude": -62.2663
+        },
+        {
+          "latitude": -38.7142,
+          "longitude": -62.2721
+        },
+        {
+          "latitude": -38.7078,
+          "longitude": -62.2784
+        }
+      ],
+      "source": "bahia-opendata"
+    },
+    {
+      "id": "opendata-500-inbound-2",
+      "lineId": "500",
+      "name": "500 Vuelta",
+      "direction": "inbound",
+      "path": [
+        {
+          "latitude": -38.7078,
+          "longitude": -62.2784
+        },
+        {
+          "latitude": -38.7142,
+          "longitude": -62.2721
+        },
+        {
+          "latitude": -38.7183,
+          "longitude": -62.2663
+        }
+      ],
+      "source": "bahia-opendata"
+    },
+    {
+      "id": "opendata-503-outbound-3",
+      "lineId": "503",
+      "name": "503 Ida",
+      "direction": "outbound",
+      "path": [
+        {
+          "latitude": -38.7551,
+          "longitude": -62.255
+        },
+        {
+          "latitude": -38.7183,
+          "longitude": -62.2704
+        },
+        {
+          "latitude": -38.6943,
+          "longitude": -62.2377
+        }
+      ],
+      "source": "bahia-opendata"
+    }
+  ],
+  "stops": []
+}
