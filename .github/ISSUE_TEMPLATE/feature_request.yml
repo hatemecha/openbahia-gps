@@ -1,0 +1,29 @@
+name: Feature request
+description: Proponer una mejora o nueva funcionalidad
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema o necesidad
+      description: Qué estás intentando lograr.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta
+      description: Qué cambiarías (comportamiento esperado) y por qué.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+      description: Opcional: otras ideas/paths que probaste.
+  - type: textarea
+    id: scope
+    attributes:
+      label: Alcance
+      description: Impacto en frontend/backend/proveedores y cómo validarías que funciona.
+

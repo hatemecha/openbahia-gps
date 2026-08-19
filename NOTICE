@@ -1,0 +1,9 @@
+OpenBahía Transit studied the public architecture of ColectivosYa
+(https://github.com/corzofederico/gpsbus-web, Apache-2.0) and the
+historical AGPL poller https://github.com/cualbondi/poller.
+
+Parsers in this repository were written from observed public JSON
+shapes and are original code. No Firebase Admin credentials are
+included. The Firebase web client identifiers documented in
+docs/realtime-sources.md are the same values already published in
+gpsbus-web.

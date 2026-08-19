@@ -1,0 +1,280 @@
+{
+  "status": "ok",
+  "paradas": [
+    {
+      "Id": "42",
+      "id_parada": "795",
+      "sentido": "ida",
+      "nombre": "AV. ARIAS 1299",
+      "latLng": "{\"lat\":-38.747259,\"lng\":-62.2738192}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"ida\",\"nombre\":\"500\"},{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "61",
+      "id_parada": "443",
+      "sentido": "ida",
+      "nombre": "RONDEAU 90",
+      "latLng": "{\"lat\":-38.718223716667,\"lng\":-62.270160516667}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"ida\",\"nombre\":\"500\"},{\"linea_id\":\"34\",\"sentido\":\"ida\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "62",
+      "id_parada": "437",
+      "sentido": "ida",
+      "nombre": "RODRIGUEZ 17",
+      "latLng": "{\"lat\":-38.7165024,\"lng\":-62.26804288597}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"ida\",\"nombre\":\"500\"},{\"linea_id\":\"34\",\"sentido\":\"ida\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"},{\"linea_id\":\"19\",\"sentido\":\"ida\",\"nombre\":\"519 A\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "63",
+      "id_parada": "567",
+      "sentido": "ida",
+      "nombre": "ZELARRAYAN 323",
+      "latLng": "{\"lat\":-38.714134895918,\"lng\":-62.26820462449}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"ida\",\"nombre\":\"500\"},{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"},{\"linea_id\":\"8\",\"sentido\":\"ida\",\"nombre\":\"505\"},{\"linea_id\":\"1\",\"sentido\":\"ida\",\"nombre\":\"509\"},{\"linea_id\":\"13\",\"sentido\":\"ida\",\"nombre\":\"513 EX\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": "2025-01-22 16:30:52",
+      "deleted_at": null
+    },
+    {
+      "Id": "70",
+      "id_parada": "706",
+      "sentido": "ida",
+      "nombre": "AV. ALEM 1140",
+      "latLng": "{\"lat\":-38.70319357551,\"lng\":-62.269902285714}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"34\",\"sentido\":\"vuelta\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": "2025-01-23 13:09:53",
+      "deleted_at": null
+    },
+    {
+      "Id": "119",
+      "id_parada": "706",
+      "sentido": "vuelta",
+      "nombre": "AV. ALEM 1140",
+      "latLng": "{\"lat\":-38.70319357551,\"lng\":-62.269902285714}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"34\",\"sentido\":\"vuelta\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": "2025-01-23 13:09:53",
+      "deleted_at": null
+    },
+    {
+      "Id": "120",
+      "id_parada": "48",
+      "sentido": "vuelta",
+      "nombre": "AV. ALEM 1024",
+      "latLng": "{\"lat\":-38.7045129,\"lng\":-62.2686898}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"34\",\"sentido\":\"vuelta\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"},{\"linea_id\":\"3\",\"sentido\":\"vuelta\",\"nombre\":\"319\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "121",
+      "id_parada": "104",
+      "sentido": "vuelta",
+      "nombre": "AV. ALEM 912",
+      "latLng": "{\"lat\":-38.705758365306,\"lng\":-62.267482944898}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"34\",\"sentido\":\"vuelta\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "125",
+      "id_parada": "332",
+      "sentido": "vuelta",
+      "nombre": "MITRE 390",
+      "latLng": "{\"lat\":-38.712768040742,\"lng\":-62.267778432113}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"},{\"linea_id\":\"15\",\"sentido\":\"vuelta\",\"nombre\":\"516\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "126",
+      "id_parada": "331",
+      "sentido": "vuelta",
+      "nombre": "MITRE 186",
+      "latLng": "{\"lat\":-38.7146166,\"lng\":-62.2655463}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"},{\"linea_id\":\"15\",\"sentido\":\"vuelta\",\"nombre\":\"516\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "142",
+      "id_parada": "613",
+      "sentido": "vuelta",
+      "nombre": "AV. ARIAS 1121",
+      "latLng": "{\"lat\":-38.74585900303,\"lng\":-62.275582119192}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "143",
+      "id_parada": "761",
+      "sentido": "vuelta",
+      "nombre": "AV. ARIAS 1499",
+      "latLng": "{\"lat\":-38.748891656566,\"lng\":-62.271800622222}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "144",
+      "id_parada": "616",
+      "sentido": "vuelta",
+      "nombre": "AV. ARIAS 1697",
+      "latLng": "{\"lat\":-38.750646620833,\"lng\":-62.269508770833}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-22 15:39:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "4116",
+      "id_parada": "104",
+      "sentido": "vuelta",
+      "nombre": "AV. ALEM 912",
+      "latLng": "{\"lat\":-38.705758365306,\"lng\":-62.267482944898}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"34\",\"sentido\":\"vuelta\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-23 13:09:53",
+      "updated_at": "2025-01-23 13:10:31",
+      "deleted_at": null
+    },
+    {
+      "Id": "185",
+      "id_parada": "824",
+      "sentido": "ida",
+      "nombre": "PICCIOLI 1993",
+      "latLng": "{\"lat\":-38.756992908163,\"lng\":-62.260594059184}",
+      "lineas": "[{\"linea_id\":\"34\",\"sentido\":\"ida\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"},{\"linea_id\":\"17\",\"sentido\":\"ida\",\"nombre\":\"518\"}]",
+      "created_at": "2025-01-22 16:41:52",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "237",
+      "id_parada": "42",
+      "sentido": "vuelta",
+      "nombre": "AV. ALEM 640",
+      "latLng": "{\"lat\":-38.708340140816,\"lng\":-62.265256883673}",
+      "lineas": "[{\"linea_id\":\"34\",\"sentido\":\"vuelta\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"},{\"linea_id\":\"3\",\"sentido\":\"vuelta\",\"nombre\":\"319\"}]",
+      "created_at": "2025-01-22 16:41:52",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "240",
+      "id_parada": "486",
+      "sentido": "vuelta",
+      "nombre": "SARMIENTO 50",
+      "latLng": "{\"lat\":-38.7167824,\"lng\":-62.2665948}",
+      "lineas": "[{\"linea_id\":\"34\",\"sentido\":\"vuelta\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"},{\"linea_id\":\"15\",\"sentido\":\"vuelta\",\"nombre\":\"516\"},{\"linea_id\":\"19\",\"sentido\":\"vuelta\",\"nombre\":\"519 A\"}]",
+      "created_at": "2025-01-22 16:41:52",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "313",
+      "id_parada": "567",
+      "sentido": "vuelta",
+      "nombre": "ZELARRAYAN 323",
+      "latLng": "{\"lat\":-38.714134895918,\"lng\":-62.26820462449}",
+      "lineas": "[{\"linea_id\":\"4\",\"sentido\":\"vuelta\",\"nombre\":\"500\"},{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"},{\"linea_id\":\"8\",\"sentido\":\"vuelta\",\"nombre\":\"505\"},{\"linea_id\":\"1\",\"sentido\":\"vuelta\",\"nombre\":\"509\"},{\"linea_id\":\"13\",\"sentido\":\"vuelta\",\"nombre\":\"513 EX\"}]",
+      "created_at": "2025-01-23 10:22:14",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "Id": "432",
+      "id_parada": "341",
+      "sentido": "vuelta",
+      "nombre": "MORENO 91",
+      "latLng": "{\"lat\":-38.718924833333,\"lng\":-62.269234133333}",
+      "lineas": "[{\"linea_id\":\"6\",\"sentido\":\"vuelta\",\"nombre\":\"503\"},{\"linea_id\":\"9\",\"sentido\":\"vuelta\",\"nombre\":\"506\"},{\"linea_id\":\"14\",\"sentido\":\"vuelta\",\"nombre\":\"514\"},{\"linea_id\":\"17\",\"sentido\":\"vuelta\",\"nombre\":\"518\"}]",
+      "created_at": "2025-01-23 10:49:36",
+      "updated_at": "2025-01-23 10:52:41",
+      "deleted_at": null
+    },
+    {
+      "Id": "456",
+      "id_parada": "582",
+      "sentido": "ida",
+      "nombre": "TIERRA DEL FUEGO 2730",
+      "latLng": "{\"lat\":-38.755570521073,\"lng\":-62.25448710409}",
+      "lineas": "[{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"},{\"linea_id\":\"17\",\"sentido\":\"ida\",\"nombre\":\"518\"}]",
+      "created_at": "2025-01-23 11:19:44",
+      "updated_at": "2025-01-23 11:20:23",
+      "deleted_at": null
+    },
+    {
+      "Id": "457",
+      "id_parada": "885",
+      "sentido": "ida",
+      "nombre": "PICCIOLI 1699",
+      "latLng": "{\"lat\":-38.754623,\"lng\":-62.2576464}",
+      "lineas": "[{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"},{\"linea_id\":\"17\",\"sentido\":\"ida\",\"nombre\":\"518\"}]",
+      "created_at": "2025-01-23 11:19:44",
+      "updated_at": "2025-01-23 11:20:23",
+      "deleted_at": null
+    },
+    {
+      "Id": "458",
+      "id_parada": "887",
+      "sentido": "ida",
+      "nombre": "PICCIOLI 1799",
+      "latLng": "{\"lat\":-38.7554354,\"lng\":-62.258639}",
+      "lineas": "[{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"},{\"linea_id\":\"17\",\"sentido\":\"ida\",\"nombre\":\"518\"}]",
+      "created_at": "2025-01-23 11:19:44",
+      "updated_at": "2025-01-23 11:20:23",
+      "deleted_at": null
+    },
+    {
+      "Id": "459",
+      "id_parada": "824",
+      "sentido": "ida",
+      "nombre": "PICCIOLI 1993",
+      "latLng": "{\"lat\":-38.756992908163,\"lng\":-62.260594059184}",
+      "lineas": "[{\"linea_id\":\"34\",\"sentido\":\"ida\",\"nombre\":\"502\"},{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"},{\"linea_id\":\"17\",\"sentido\":\"ida\",\"nombre\":\"518\"}]",
+      "created_at": "2025-01-23 11:19:44",
+      "updated_at": "2025-01-23 11:20:23",
+      "deleted_at": null
+    },
+    {
+      "Id": "460",
+      "id_parada": "895",
+      "sentido": "ida",
+      "nombre": "PERITO MORENO 2402",
+      "latLng": "{\"lat\":-38.757175377551,\"lng\":-62.262412557143}",
+      "lineas": "[{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-23 11:19:44",
+      "updated_at": "2025-01-23 11:20:23",
+      "deleted_at": null
+    },
+    {
+      "Id": "461",
+      "id_parada": "893",
+      "sentido": "ida",
+      "nombre": "PERITO MORENO 2202",
+      "latLng": "{\"lat\":-38.755517028571,\"lng\":-62.264619134694}",
+      "lineas": "[{\"linea_id\":\"6\",\"sentido\":\"ida\",\"nombre\":\"503\"}]",
+      "created_at": "2025-01-23 11:19:44",
+      "updated_at": "2025-01-23 11:20:23",
+      "deleted_at": null
+    }
+  ]
+}

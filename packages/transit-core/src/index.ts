@@ -1,0 +1,126 @@
+export type {
+  ConnectionState,
+  FreshnessConfig,
+  FreshnessLevel,
+  GeoPoint,
+  GetVehiclesOptions,
+  GpsRejectReason,
+  NextStopHint,
+  PositionKind,
+  ProviderAvailability,
+  ProviderId,
+  RealtimeProvider,
+  RealtimeState,
+  RouteAssignmentSource,
+  RouteMatch,
+  RouteMatchState,
+  StaticDatasetMetadata,
+  StaticDataState,
+  StaticTransitProvider,
+  TransitLine,
+  TransitRoute,
+  TransitStop,
+  TravelDirection,
+  VehiclePosition,
+} from './types.js';
+export { assertNever } from './types.js';
+export {
+  connectionStateSchema,
+  freshnessLevelSchema,
+  geoPointSchema,
+  isValidLatitude,
+  isValidLongitude,
+  nextStopHintSchema,
+  normalizeBearing,
+  parseTransitRoutes,
+  parseTransitStops,
+  parseVehiclePosition,
+  parseVehiclePositions,
+  positionKindSchema,
+  realtimeStateSchema,
+  routeAssignmentSourceSchema,
+  routeMatchStateSchema,
+  staticDataStateSchema,
+  transitLineSchema,
+  transitRouteSchema,
+  transitStopSchema,
+  travelDirectionSchema,
+  vehiclesMetaSchema,
+  vehiclesResponseSchema,
+} from './schemas.js';
+export {
+  ageMs,
+  cacheFreshness,
+  DEFAULT_FRESHNESS_CONFIG,
+  freshnessFromTimestamp,
+  freshnessLevel,
+  isStale,
+  parseTimestampToIso,
+  unixSecondsToIso,
+} from './time.js';
+export {
+  BAHIA_BLANCA_BOUNDS,
+  BAHIA_BLANCA_CENTER,
+  BAHIA_BLANCA_INGEST_BOUNDS,
+  DEFAULT_MAX_JUMP_METERS,
+  haversineMeters,
+  interpolateBearing,
+  interpolatePoint,
+  interpolatePosition,
+  isInBahiaBlanca,
+  isInBahiaBlancaIngest,
+} from './geo.js';
+export {
+  BAHIA_BLANCA_LINES,
+  lineById,
+  lineByRawRouteId,
+  resolveRouteId,
+  type CatalogLine,
+} from './catalog.js';
+export { directionLabel, isDeterminedDirection, parseTravelDirection } from './direction.js';
+export {
+  circularAngleDiff,
+  interpolateAlongPolyline,
+  nearestPointOnPolyline,
+  nearestPointOnSegment,
+  pointAtProgress,
+  polylineLengthMeters,
+  remainingDistanceMeters,
+  segmentBearing,
+} from './polyline.js';
+export {
+  MATCH_DISPLAY_CONFIDENCE,
+  MATCH_DISPLAY_DISTANCE_M,
+  MATCH_DISPLAY_RELEASE_CONFIDENCE,
+  MATCH_DISPLAY_RELEASE_DISTANCE_M,
+  MATCH_MAX_DISTANCE_M,
+  MATCH_ON_ROUTE_DISTANCE_M,
+  classifyRouteMatch,
+  directionIsReliable,
+  enrichMatchedVehicle,
+  matchVehicleToRoutes,
+  shouldUseMatchedPosition,
+} from './matching.js';
+export { nextStopAlongRoute } from './next-stop.js';
+export { routesToGeoJson, stopsToGeoJson } from './geojson.js';
+export {
+  GPS_FUTURE_SLACK_MS,
+  GPS_JUMP_METERS,
+  GPS_JUMP_WINDOW_MS,
+  LINE_ID_PATTERN,
+  STATIC_SCHEMA_VERSION,
+  classifyGpsObservation,
+  gpsRejectLogMessage,
+  isNullIsland,
+  isPlausibleLineId,
+} from './validation.js';
+export { CircuitBreaker, type CircuitState } from './circuit-breaker.js';
+export { connectionStateFromRealtime, deriveRealtimeState } from './realtime-state.js';
+export {
+  COPY,
+  reasonPhrase,
+  realtimeStateLabel,
+  routeMatchLabel,
+  staticDataStateLabel,
+  type PublicReasonCode,
+} from './public-copy.js';

@@ -1,0 +1,33 @@
+name: Bug report
+description: Reportar un fallo reproducible
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Gracias por ayudar a mejorar OpenBahía Transit. Si hay datos sensibles, no los pegues."
+  - type: textarea
+    id: summary
+    attributes:
+      label: Resumen
+      description: Qué falla y qué esperabas que pasara.
+      placeholder: "Por ejemplo: al consultar la línea 503 el sentido queda en 'sin determinar' permanentemente."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      description: Pasos concretos (incluye línea/routeId, proveedor realtime, etc.).
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / evidencia
+      description: Mensajes de consola, stack traces, respuestas HTTP, capturas (sin secretos).
+  - type: textarea
+    id: environment
+    attributes:
+      label: Entorno
+      description: SO, versión de Node/pnpm, y valores relevantes de `.env` (sin secretos).
+

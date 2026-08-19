@@ -1,0 +1,113 @@
+{
+  "status": "ok",
+  "data": [
+    {
+      "interno": "SG 20",
+      "angle": "104",
+      "dt_server": "2026-08-19 12:05:14",
+      "dt_tracker": "2026-08-19 12:05:10",
+      "icon": null,
+      "imei": "869671073369710",
+      "lat": "-38.754752",
+      "lng": "-62.254745",
+      "name": "SG 20",
+      "direccion": "ida"
+    },
+    {
+      "interno": "SG 21",
+      "angle": "317",
+      "dt_server": "2026-08-19 12:21:18",
+      "dt_tracker": "2026-08-19 12:21:16",
+      "icon": null,
+      "imei": "869671072468638",
+      "lat": "-38.702897",
+      "lng": "-62.264255",
+      "name": "SG 21",
+      "direccion": "ida"
+    },
+    {
+      "interno": "SG 38",
+      "angle": "89",
+      "dt_server": "2026-08-19 12:18:06",
+      "dt_tracker": "2026-08-19 12:18:02",
+      "icon": null,
+      "imei": "865413057162363",
+      "lat": "-38.754877",
+      "lng": "-62.254753",
+      "name": "SG 38",
+      "direccion": "ida"
+    },
+    {
+      "interno": "SG 44",
+      "angle": "219",
+      "dt_server": "2026-08-19 12:20:43",
+      "dt_tracker": "2026-08-19 12:20:41",
+      "icon": null,
+      "imei": "869671075886992",
+      "lat": "-38.718928",
+      "lng": "-62.269113",
+      "name": "SG 44",
+      "direccion": "ida"
+    },
+    {
+      "interno": "SG 79",
+      "angle": "90",
+      "dt_server": "2026-08-19 12:21:20",
+      "dt_tracker": "2026-08-19 12:21:17",
+      "icon": null,
+      "imei": "869671075552172",
+      "lat": "-38.702068",
+      "lng": "-62.241417",
+      "name": "SG 79",
+      "direccion": "ida"
+    },
+    {
+      "interno": "SG 92",
+      "angle": "30",
+      "dt_server": "2026-08-19 12:21:22",
+      "dt_tracker": "2026-08-19 12:21:20",
+      "icon": null,
+      "imei": "869671077222485",
+      "lat": "-38.70204",
+      "lng": "-62.257313",
+      "name": "SG 92",
+      "direccion": "ida"
+    },
+    {
+      "interno": "SG 46",
+      "angle": "318",
+      "dt_server": "2026-08-19 12:21:16",
+      "dt_tracker": "2026-08-19 12:21:13",
+      "icon": null,
+      "imei": "869671072494063",
+      "lat": "-38.715117",
+      "lng": "-62.267072",
+      "name": "SG 46",
+      "direccion": "ida"
+    },
+    {
+      "interno": "SG 86",
+      "angle": "313",
+      "dt_server": "2026-08-19 12:21:22",
+      "dt_tracker": "2026-08-19 12:21:20",
+      "icon": null,
+      "imei": "869671077093431",
+      "lat": "-38.74379",
+      "lng": "-62.278207",
+      "name": "SG 86",
+      "direccion": "ida"
+    },
+    {
+      "interno": "SG 119",
+      "angle": "226",
+      "dt_server": "2026-08-19 12:16:27",
+      "dt_tracker": "2026-08-19 12:16:25",
+      "icon": null,
+      "imei": "869671072493511",
+      "lat": "-38.700215",
+      "lng": "-62.255423",
+      "name": "SG 119",
+      "direccion": "ida"
+    }
+  ]
+}
