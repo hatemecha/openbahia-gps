@@ -35,7 +35,7 @@ jobs:
         run: pnpm test
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium webkit
+        run: pnpm --filter @openbahia/web exec playwright install --with-deps chromium webkit
 
       - name: E2E tests
         run: pnpm test:e2e
