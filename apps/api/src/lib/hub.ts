@@ -9,9 +9,11 @@ import {
   gpsRejectLogMessage,
   haversineMeters,
   isStale,
+  isVehiclePubliclyVisible,
   matchVehicleToRoutes,
   parseVehiclePositions,
   reasonPhrase,
+  vehicleVisibleMaxAgeMs,
   vehiclesResponseSchema,
   type ConnectionState,
   type FreshnessConfig,
@@ -423,27 +425,18 @@ export class VehicleHub {
         receivedAt: vehicle.receivedAt,
         previous: previousGood,
       });
-      if (reject !== 'ok' && reject !== 'jump') {
+      if (reject !== 'ok') {
         this.options.logger.warn(
           { vehicleId: vehicle.vehicleId, lineId, reason: reject },
           gpsRejectLogMessage(reject, vehicle.vehicleId),
         );
         continue;
       }
-      const skipMatch = reject === 'jump';
-      if (skipMatch) {
-        this.options.logger.warn(
-          { vehicleId: vehicle.vehicleId, lineId, reason: 'jump' },
-          gpsRejectLogMessage('jump', vehicle.vehicleId),
-        );
-      }
       const trail = this.history.get(key) ?? [];
-      const speedMps = skipMatch ? undefined : estimateSpeed(trail, vehicle);
+      const speedMps = estimateSpeed(trail, vehicle);
       const previous = this.lastMatch.get(key);
       const match =
-        skipMatch || routes.length === 0
-          ? null
-          : matchVehicleToRoutes(vehicle, routes, { previous, speedMps });
+        routes.length === 0 ? null : matchVehicleToRoutes(vehicle, routes, { previous, speedMps });
       if (match) {
         this.lastMatch.set(key, match);
       }
@@ -454,10 +447,11 @@ export class VehicleHub {
         bearing: vehicle.bearing,
         match,
       };
-      if (!skipMatch) {
-        this.history.set(key, [...trail, next].slice(-40));
-        this.lastGood.set(key, { point: { latitude: vehicle.latitude, longitude: vehicle.longitude }, at: next.at });
-      }
+      this.history.set(key, [...trail, next].slice(-40));
+      this.lastGood.set(key, {
+        point: { latitude: vehicle.latitude, longitude: vehicle.longitude },
+        at: next.at,
+      });
       const enriched = enrichMatchedVehicle({
         vehicle: { ...vehicle, lineId, routeId: vehicle.routeId ?? lineId },
         match,
@@ -477,9 +471,17 @@ export class VehicleHub {
   }
 
   private publicVehicles(vehicles: VehiclePosition[]): VehiclePosition[] {
-    // GPSBahia official Leaflet renders every row in the current track_data payload.
-    // Age is metadata, not a reason to omit a marker.
-    return vehicles;
+    const now = Date.now();
+    const maxAgeMs = vehicleVisibleMaxAgeMs(this.options.freshness);
+    return vehicles.filter((vehicle) => {
+      if (!isVehiclePubliclyVisible(vehicle, now, maxAgeMs)) {
+        return false;
+      }
+      if (vehicle.source === 'gpsbahia' && vehicle.routeMatchState === 'off-route') {
+        return false;
+      }
+      return true;
+    });
   }
 
   private async resolveLines(): Promise<TransitLine[]> {
