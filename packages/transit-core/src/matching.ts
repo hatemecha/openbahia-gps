@@ -13,6 +13,7 @@ import type {
 import { nextStopAlongRoute } from './next-stop.js';
 
 export const MATCH_MAX_DISTANCE_M = 180;
+export const MATCH_OFF_ROUTE_DISTANCE_M = 600;
 export const MATCH_ON_ROUTE_DISTANCE_M = 80;
 export const MATCH_DISPLAY_DISTANCE_M = 45;
 export const MATCH_DISPLAY_CONFIDENCE = 0.68;
@@ -249,7 +250,7 @@ export function classifyRouteMatch(
     return 'not-available';
   }
   if (
-    match.distanceFromRouteMeters > MATCH_MAX_DISTANCE_M ||
+    match.distanceFromRouteMeters > MATCH_OFF_ROUTE_DISTANCE_M ||
     match.assignmentSource === 'unknown'
   ) {
     return 'off-route';

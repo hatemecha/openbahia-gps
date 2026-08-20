@@ -310,7 +310,7 @@ describe('504 ~242 m off-route fixture', () => {
 
   const rawLatitude = -38.72 + 242 / 111_320;
 
-  it('keeps raw GPS, skips snap presentation, and does not invent a next stop', () => {
+  it('keeps raw GPS, treats a moderate detour as uncertain, and does not invent a next stop', () => {
     const vehicle = {
       vehicleId: 'SG-outlier',
       lineId: '504',
@@ -332,9 +332,9 @@ describe('504 ~242 m off-route fixture', () => {
     expect(enriched.latitude).toBe(rawLatitude);
     expect(enriched.longitude).toBe(-62.26);
     expect(enriched.positionKind).toBe('gps');
-    expect(enriched.routeMatchState).toBe('off-route');
+    expect(enriched.routeMatchState).toBe('uncertain');
     expect(enriched.nextStop).toBeUndefined();
     expect(enriched.direction).toBe('outbound');
-    expect(classifyRouteMatch(match, true)).toBe('off-route');
+    expect(classifyRouteMatch(match, true)).toBe('uncertain');
   });
 });
