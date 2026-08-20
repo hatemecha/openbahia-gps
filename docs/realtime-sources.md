@@ -1,6 +1,6 @@
 # Fuentes de tiempo real — Bahía Blanca
 
-Última verificación de este documento: **2026-08-19**.  
+Última verificación de este documento: **2026-08-20**.  
 Leyenda: **hecho** = observado en esta investigación; **hipótesis** = no verificado.
 
 Ninguna de estas fuentes es GTFS-Realtime oficial. OpenBahía Transit las encapsula detrás de providers propios.
@@ -16,11 +16,11 @@ Ninguna de estas fuentes es GTFS-Realtime oficial. OpenBahía Transit las encaps
 | Tipo | Cliente web municipal de movilidad (marca Nixel en el HTML) |
 | Formato | JSON `{ status, data: [{ interno, angle, dt_tracker, dt_server, lat, lng, imei, direccion, name }] }` |
 | Realtime | Sí (hecho, 2026-08-19) |
-| Frecuencia | El JS público vuelve a pedir la línea seleccionada de forma periódica; no medimos el intervalo exacto del sitio (hipótesis: ~5 s, como el poller 2018) |
+| Frecuencia | **Hecho (2026-08-20):** `setInterval(render_tracks, 5e3)` in first-party `app.min.js`; Playwright observed `POST /app/track_data/{id}.json` every 5 s after selecting a line. |
 | Licencia conocida | No publicada como dato abierto. Sitio institucional. Teselas del mapa IGN en el cliente original |
 | Dependencia | Municipio de Bahía Blanca + Nixel (`nixel.com.ar`, app `ar.com.nixel.GPSBahia`) |
 | Riesgo | Contrato no documentado; token de página `vgggaxqq`; cookie `ci_session`; puede cambiar sin aviso |
-| Fecha de última verificación | 2026-08-19 |
+| Fecha de última verificación | 2026-08-20 |
 | Notas | Ver detalle abajo |
 
 ### Hechos

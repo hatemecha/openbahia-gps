@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { parseGpsBahiaRoutes, parseGpsBahiaStops, parseHomepageLineOptions } from './parse-static.js';
+import { parseGpsBahiaRoutes, parseGpsBahiaStops, parseHomepageLineOptions, resolveCurrentGpsBahiaLine } from './parse-static.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(root, '../fixtures/homepage-sample.html'), 'utf8');
@@ -31,5 +31,17 @@ describe('gpsbahia static parser', () => {
       stop.routeIds.some((id) => routes.some((route) => route.id === id && route.lineId === '503')),
     );
     expect(with503.length).toBeGreaterThan(3);
+  });
+
+  it('maps 506 and 513 from the homepage fixture and prefers homepage over hardcoded ids', () => {
+    const html = readFileSync(join(root, '../fixtures/homepage-line-map.html'), 'utf8');
+    expect(resolveCurrentGpsBahiaLine('506', html)?.rawRouteId).toBe('9');
+    expect(resolveCurrentGpsBahiaLine('513', html)?.rawRouteId).toBe('12');
+    expect(resolveCurrentGpsBahiaLine('506', null)?.rawRouteId).toBe('9');
+    expect(resolveCurrentGpsBahiaLine('513', undefined)?.rawRouteId).toBe('12');
+    const override =
+      `<select><option value="77" data-recorridos='[{"Id":"1","linea_id":"77","tipo":"ida","path":["-38.7,-62.2","-38.71,-62.21"]}]'>506</option></select>`;
+    expect(resolveCurrentGpsBahiaLine('506', override)?.rawRouteId).toBe('77');
+    expect(parseHomepageLineOptions(html).map((option) => option.name)).toEqual(['506', '513', '599']);
   });
 });

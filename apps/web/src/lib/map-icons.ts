@@ -1,5 +1,5 @@
 const ARROW_SIZE = 32;
-const STOP_SIZE = 20;
+const STOP_SIZE = 14;
 
 function canvasContext(size: number): {
   canvas: HTMLCanvasElement;
@@ -54,17 +54,17 @@ export function createStopIconImage(): ImageData | null {
   const { canvas, ctx } = drawn;
   const cx = STOP_SIZE / 2;
   const cy = STOP_SIZE / 2;
-  const r = 6;
+  const r = 4;
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#f3f4f6';
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = '#185fa5';
-  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#6b7280';
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  ctx.fillStyle = '#185fa5';
+  ctx.fillStyle = '#6b7280';
   ctx.beginPath();
   ctx.arc(cx, cy, 2, 0, Math.PI * 2);
   ctx.fill();

@@ -14,6 +14,9 @@
     "test": "pnpm -r --if-present test",
     "test:e2e": "pnpm --filter @openbahia/web test:e2e",
     "test:live": "LIVE_GPS=1 pnpm --filter @openbahia/api exec vitest run src/live.test.ts",
+    "diagnose:gps": "pnpm --filter @openbahia/api exec tsx ../../scripts/diagnose-gpsbahia.ts",
+    "probe:gpsbahia": "pnpm --filter @openbahia/api exec tsx ../../scripts/probe-gpsbahia-ui.ts",
+    "compare:gpsbahia": "pnpm --filter @openbahia/api exec tsx ../../scripts/compare-gpsbahia.ts",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck",
     "format": "prettier --write ."

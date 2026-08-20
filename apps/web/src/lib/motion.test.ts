@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { interpolatePosition } from '@openbahia/transit-core';
-import { displayPoint, type AnimatedVehicle } from './motion';
+import {
+  displayCoords,
+  displayPoint,
+  VISUAL_GEO_INTERPOLATION,
+  type AnimatedVehicle,
+} from './motion';
 import type { VehiclePosition } from './types';
 import type { TransitRoute } from '@openbahia/transit-core';
 
@@ -13,8 +18,24 @@ const sample: VehiclePosition = {
   source: 'mock',
 };
 
+describe('displayCoords', () => {
+  it('always returns raw GPS even when matched coordinates exist', () => {
+    const shown = displayCoords({
+      ...sample,
+      latitude: -38.7,
+      longitude: -62.25,
+      matchedLatitude: -38.71,
+      matchedLongitude: -62.26,
+      positionKind: 'map-matched',
+    });
+    expect(shown.latitude).toBe(-38.7);
+    expect(shown.longitude).toBe(-62.25);
+  });
+});
+
 describe('smooth movement helper', () => {
-  it('interpolates geographically between positions', () => {
+  it('does not interpolate geographically in v0.1', () => {
+    expect(VISUAL_GEO_INTERPOLATION).toBe(false);
     const vehicle: AnimatedVehicle = {
       vehicleId: '1',
       from: { latitude: -38.7183, longitude: -62.2663 },
@@ -28,8 +49,10 @@ describe('smooth movement helper', () => {
       vehicle: sample,
     };
     const mid = displayPoint(vehicle, 500);
+    expect(mid.latitude).toBe(vehicle.to.latitude);
+    expect(mid.longitude).toBe(vehicle.to.longitude);
     const expected = interpolatePosition(vehicle.from, vehicle.to, 0.5);
-    expect(mid.latitude).toBeCloseTo(expected.latitude, 6);
+    expect(mid.latitude).not.toBeCloseTo(expected.latitude, 6);
   });
 
   it('does not interpolate absurd jumps', () => {
@@ -76,13 +99,12 @@ describe('smooth movement helper', () => {
       matchedRouteId: route.id,
       vehicle: {
         ...sample,
-        positionKind: 'gps',
+        positionKind: 'map-matched',
       },
     };
 
     const mid = displayPoint(vehicle, 500, route);
-    const expected = interpolatePosition(vehicle.from, vehicle.to, 0.5);
-    expect(mid.latitude).toBeCloseTo(expected.latitude, 10);
-    expect(mid.longitude).toBeCloseTo(expected.longitude, 10);
+    expect(mid.latitude).toBe(0.1);
+    expect(mid.longitude).toBe(0.1);
   });
 });

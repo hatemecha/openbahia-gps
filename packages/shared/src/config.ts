@@ -86,6 +86,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     1,
   );
   const veryStaleAfterMs = readOptionalNumber('VERY_STALE_AFTER_MS', staleAfterMs, env, 1);
+  const vehicleVisibleMaxAgeMs = readOptionalNumber(
+    'VEHICLE_VISIBLE_MAX_AGE_MS',
+    DEFAULT_FRESHNESS_CONFIG.vehicleVisibleMaxAgeMs ?? 120_000,
+    env,
+    1,
+  );
   if (staleAfterMs < liveAfterMs) {
     throw new ConfigError('STALE_AFTER_MS must be >= LIVE_AFTER_MS');
   }
@@ -96,7 +102,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port: readOptionalNumber('PORT', 3000, env, 1),
     host: env.HOST ?? '127.0.0.1',
     provider: readProvider(env.TRANSIT_PROVIDER),
-    realtimeRefreshMs: readOptionalNumber('REALTIME_REFRESH_MS', 10_000, env, 1_000),
+    realtimeRefreshMs: readOptionalNumber('REALTIME_REFRESH_MS', 5_000, env, 1_000),
     realtimeIdleTtlMs: readOptionalNumber('REALTIME_IDLE_TTL_MS', 120_000, env, 1_000),
     realtimeMaxActiveLines: Math.floor(readOptionalNumber('REALTIME_MAX_ACTIVE_LINES', 8, env, 1)),
     realtimeMaxConcurrentRequests: Math.floor(
@@ -106,6 +112,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       liveAfterMs,
       staleAfterMs,
       veryStaleAfterMs,
+      vehicleVisibleMaxAgeMs,
     },
     publicApiUrl: env.PUBLIC_API_URL ?? 'http://localhost:3000',
     gpsbahiaBaseUrl: env.GPSBAHIA_BASE_URL ?? 'https://www.gpsbahia.com.ar/',

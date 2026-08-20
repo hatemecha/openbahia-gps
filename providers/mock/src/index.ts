@@ -218,7 +218,20 @@ export class MockStaticProvider implements StaticTransitProvider {
         source: 'mock',
       });
     }
-    const routes = [...unique.values()];
+    const routes = [...unique.values()].flatMap((route) => {
+      if (route.lineId !== '503') {
+        return [route];
+      }
+      return [
+        route,
+        {
+          ...route,
+          id: `${route.id}-inbound`,
+          direction: 'inbound' as const,
+          path: [...route.path].reverse(),
+        },
+      ];
+    });
     return options?.lineId ? routes.filter((route) => route.lineId === options.lineId) : routes;
   }
 

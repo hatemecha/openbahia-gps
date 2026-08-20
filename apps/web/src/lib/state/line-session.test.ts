@@ -59,4 +59,24 @@ describe('line session race protection', () => {
     session.destroy();
     vi.unstubAllGlobals();
   });
+
+  it('does not mix 506 realtime into 513 after a line switch', () => {
+    const session = createLineSession();
+    const generations: number[] = [];
+    session.resetRealtime((gen) => {
+      generations.push(gen);
+      return () => undefined;
+    });
+    const first = generations.at(-1) ?? 0;
+    expect(session.isRealtimeGeneration(first)).toBe(true);
+    session.resetRealtime((gen) => {
+      generations.push(gen);
+      return () => undefined;
+    });
+    const second = generations.at(-1) ?? 0;
+    expect(second).toBeGreaterThan(first);
+    expect(session.isRealtimeGeneration(first)).toBe(false);
+    expect(session.isRealtimeGeneration(second)).toBe(true);
+    session.destroy();
+  });
 });

@@ -1,6 +1,5 @@
 import {
   assertNever,
-  resolveRouteId,
   type GetVehiclesOptions,
   type ProviderAvailability,
   type RealtimeProvider,
@@ -12,6 +11,7 @@ import {
   gpsBahiaLines,
   parseGpsBahiaTrackPayload,
 } from './parse.js';
+import { parseGpsBahiaLinesFromHtml, resolveCurrentGpsBahiaLine } from './parse-static.js';
 import { GPSBAHIA_UNAVAILABLE, GpsBahiaSessionManager } from './session.js';
 
 export interface GpsBahiaProviderOptions {
@@ -65,16 +65,28 @@ export class GpsBahiaProvider implements RealtimeProvider {
   }
 
   async getLines(): Promise<TransitLine[]> {
-    return gpsBahiaLines();
+    try {
+      await this.sessions.getSession();
+    } catch {
+      return gpsBahiaLines();
+    }
+    const html = this.sessions.getLastHtml();
+    const parsed = html ? parseGpsBahiaLinesFromHtml(html) : [];
+    return parsed.length > 0 ? parsed : gpsBahiaLines();
   }
 
   async getVehicles(options?: GetVehiclesOptions): Promise<VehiclePosition[]> {
-    const routeId = options?.lineId ?? options?.routeId ?? this.defaultRouteId;
-    const line = resolveRouteId(routeId);
-    const rawRouteId = line?.rawRouteId ?? routeId;
+    const requested = options?.lineId ?? options?.routeId ?? this.defaultRouteId;
+    try {
+      await this.sessions.getSession();
+    } catch {
+      // fetchTrack will surface the same session failure.
+    }
+    const line = resolveCurrentGpsBahiaLine(requested, this.sessions.getLastHtml());
+    const rawRouteId = line?.rawRouteId ?? requested;
     const payload = await this.fetchTrack(rawRouteId);
     const vehicles = parseGpsBahiaTrackPayload(payload, {
-      routeId: line?.id ?? routeId,
+      routeId: line?.id ?? requested,
       rawRouteId,
       receivedAt: new Date().toISOString(),
       source: this.id,
@@ -144,4 +156,5 @@ export {
   extractPublicPageToken,
   parseGpsBahiaTrackPayload,
 } from './parse.js';
-export { parseGpsBahiaRoutes, parseGpsBahiaStops, parseHomepageLineOptions } from './parse-static.js';
+export { parseGpsBahiaRoutes, parseGpsBahiaStops, parseHomepageLineOptions, resolveCurrentGpsBahiaLine } from './parse-static.js';
+export { observedTrackRowLineId } from './parse.js';

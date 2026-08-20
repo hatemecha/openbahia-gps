@@ -107,7 +107,6 @@ export class VehicleHub {
   private readonly history = new Map<string, Observation[]>();
   private readonly lastMatch = new Map<string, RouteMatch>();
   private readonly lastPositionKind = new Map<string, PositionKind>();
-  private readonly lastSeen = new Map<string, { vehicle: VehiclePosition; at: number }>();
   private readonly lastGood = new Map<string, { point: { latitude: number; longitude: number }; at: number }>();
   private readonly breaker: CircuitBreaker;
   private readonly scheduler: UpstreamScheduler;
@@ -183,7 +182,7 @@ export class VehicleHub {
 
   snapshot(lineId = this.focusedLineId): VehiclesEnvelope {
     const slot = this.slots.get(lineId);
-    const vehicles = slot?.vehicles ?? [];
+    const vehicles = this.publicVehicles(slot?.vehicles ?? []);
     const generatedAt = new Date().toISOString();
     const newestVehicle = vehicles.reduce<string | null>((latest, vehicle) => {
       if (!latest || vehicle.observedAt > latest) {
@@ -193,13 +192,7 @@ export class VehicleHub {
     }, null);
     const lastSuccessfulUpdate = slot?.lastSuccessfulUpdate ?? null;
     const freshness = newestVehicle
-      ? freshnessLevel(
-          Math.max(
-            Date.now() - Date.parse(newestVehicle),
-            lastSuccessfulUpdate ? Date.now() - Date.parse(lastSuccessfulUpdate) : 0,
-          ),
-          this.options.freshness,
-        )
+      ? freshnessLevel(Date.now() - Date.parse(newestVehicle), this.options.freshness)
       : freshnessLevel(
           lastSuccessfulUpdate ? Date.now() - Date.parse(lastSuccessfulUpdate) : Number.POSITIVE_INFINITY,
           this.options.freshness,
@@ -285,16 +278,18 @@ export class VehicleHub {
     slot.lastRequestedAt = Date.now();
     this.focusedLineId = lineId;
     this.activate(lineId);
-    if (slot.lastSuccessfulUpdate && !slot.refreshInFlight) {
-      this.metrics.cacheHits += 1;
-    }
     if (slot.refreshInFlight) {
       await slot.refreshInFlight;
       return;
     }
-    if (!slot.lastSuccessfulUpdate) {
+    const cacheAgeMs = slot.lastSuccessfulUpdate
+      ? Date.now() - Date.parse(slot.lastSuccessfulUpdate)
+      : Number.POSITIVE_INFINITY;
+    if (!slot.lastSuccessfulUpdate || cacheAgeMs > this.options.refreshMs) {
       await this.refreshLine(lineId);
+      return;
     }
+    this.metrics.cacheHits += 1;
   }
 
   private activate(lineId: string): void {
@@ -476,37 +471,15 @@ export class VehicleHub {
       if (enriched.positionKind) {
         this.lastPositionKind.set(key, enriched.positionKind);
       }
-      this.lastSeen.set(key, { vehicle: enriched, at: Date.now() });
       out.push(enriched);
     }
-    return [...out, ...this.recentlySeenMissing(lineId, out)];
+    return out;
   }
 
-  /**
-   * A unit missing from a single upstream response (partial payload, one rejected
-   * fix) must not blink off the map. Hold its last known position, untouched, until
-   * it stops counting as live; the client already ages it with observedAt.
-   */
-  private recentlySeenMissing(lineId: string, reported: VehiclePosition[]): VehiclePosition[] {
-    const prefix = `${lineId}:`;
-    const reportedIds = new Set(reported.map((vehicle) => vehicle.vehicleId));
-    const graceMs = this.options.freshness.liveAfterMs;
-    const now = Date.now();
-    const held: VehiclePosition[] = [];
-    for (const [key, entry] of this.lastSeen) {
-      if (!key.startsWith(prefix)) {
-        continue;
-      }
-      if (reportedIds.has(entry.vehicle.vehicleId)) {
-        continue;
-      }
-      if (now - entry.at > graceMs) {
-        this.lastSeen.delete(key);
-        continue;
-      }
-      held.push(entry.vehicle);
-    }
-    return held;
+  private publicVehicles(vehicles: VehiclePosition[]): VehiclePosition[] {
+    // GPSBahia official Leaflet renders every row in the current track_data payload.
+    // Age is metadata, not a reason to omit a marker.
+    return vehicles;
   }
 
   private async resolveLines(): Promise<TransitLine[]> {

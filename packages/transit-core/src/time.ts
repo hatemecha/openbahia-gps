@@ -1,10 +1,25 @@
 import { assertNever, type FreshnessConfig, type FreshnessLevel } from './types.js';
 
+export const DEFAULT_VEHICLE_VISIBLE_MAX_AGE_MS = 120_000;
+
 export const DEFAULT_FRESHNESS_CONFIG: FreshnessConfig = {
   liveAfterMs: 30_000,
   staleAfterMs: 120_000,
   veryStaleAfterMs: 120_000,
+  vehicleVisibleMaxAgeMs: DEFAULT_VEHICLE_VISIBLE_MAX_AGE_MS,
 };
+
+export function vehicleVisibleMaxAgeMs(config: FreshnessConfig = DEFAULT_FRESHNESS_CONFIG): number {
+  return config.vehicleVisibleMaxAgeMs ?? DEFAULT_VEHICLE_VISIBLE_MAX_AGE_MS;
+}
+
+export function isVehiclePubliclyVisible(
+  vehicle: { observedAt: string },
+  nowMs = Date.now(),
+  maxAgeMs = DEFAULT_VEHICLE_VISIBLE_MAX_AGE_MS,
+): boolean {
+  return ageMs(vehicle.observedAt, nowMs) <= maxAgeMs;
+}
 
 export function ageMs(observedAt: string, nowMs = Date.now()): number {
   const observed = Date.parse(observedAt);

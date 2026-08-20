@@ -25,7 +25,7 @@ GPSBahía HTML + paradas → GpsBahiaStaticProvider → StaticStore (data/cache)
 
 ## Realtime por demanda
 
-`VehicleHub` activa una línea cuando hay un GET o un cliente SSE. Mientras hay observadores, refresca cada `REALTIME_REFRESH_MS` (10 s). Si nadie mira, sigue caliente `REALTIME_IDLE_TTL_MS` (120 s) y deja de consultar. Máximo `REALTIME_MAX_ACTIVE_LINES` (8). Cien clientes en la 503 = una sola petición upstream (single-flight + caché).
+`VehicleHub` activa una línea cuando hay un GET o un cliente SSE. Mientras hay observadores, refresca cada `REALTIME_REFRESH_MS` (5 s, igual que el `setInterval(render_tracks, 5e3)` de GPSBahia). Si nadie mira, sigue caliente `REALTIME_IDLE_TTL_MS` (120 s) y deja de consultar. Máximo `REALTIME_MAX_ACTIVE_LINES` (8). Cien clientes en la 503 = una sola petición upstream (single-flight + caché).
 
 La sesión de GPSBahía (`GpsBahiaSessionManager`) se reutiliza. No se crea una sesión por poll. Token inválido o sesión vacía: renovar y reintentar **una** vez.
 

@@ -2,9 +2,8 @@
   import { browser } from '$app/environment';
   import { onDestroy, onMount } from 'svelte';
   import { isInBahiaBlancaIngest } from '@openbahia/transit-core';
-  import Eye from 'lucide-svelte/icons/eye';
-  import EyeOff from 'lucide-svelte/icons/eye-off';
   import Locate from 'lucide-svelte/icons/locate';
+  import LocateFixed from 'lucide-svelte/icons/locate-fixed';
   import ZoomIn from 'lucide-svelte/icons/zoom-in';
   import ZoomOut from 'lucide-svelte/icons/zoom-out';
   import TransitMap from '$lib/components/TransitMap.svelte';
@@ -18,7 +17,7 @@
     statusCaption,
     vehicleHeading,
   } from '$lib/format';
-  import { requestClientLocation } from '$lib/location';
+  import { createLocationWatch, type ClientLocation } from '$lib/location';
   import { loadPrefs, savePrefs } from '$lib/prefs';
   import { connectRealtime } from '$lib/realtime';
   import { createLineSession } from '$lib/state/line-session';
@@ -37,7 +36,6 @@
   let routes = $state<TransitRoute[]>([]);
   let stops = $state<TransitStop[]>([]);
   let lineId = $state('503');
-  let previousLineId = $state<string | null>(null);
   let meta = $state<VehiclesMeta | null>(null);
   let now = $state(Date.now());
   let debug = $state(false);
@@ -51,6 +49,11 @@
   let mapFailed = $state(false);
   let mapControls = $state<MapControls | null>(null);
   let locationNote = $state<string | null>(null);
+  let locationActive = $state(false);
+  let userLocation = $state<ClientLocation | null>(null);
+  let locationCentered = $state(false);
+  let locationErrorShown = $state(false);
+  let locationWatch = $state<ReturnType<typeof createLocationWatch> | null>(null);
   let loadingSince = $state<number | null>(null);
   let loadFailed = $state(false);
   let online = $state(true);
@@ -58,7 +61,6 @@
   let panel: HTMLDialogElement | undefined = $state();
   let lastFocused: HTMLElement | null = null;
   let stopsUnavailable = $state(false);
-  let showVehicleList = $state(false);
   let realtimeGeneration = $state(0);
 
   const lineSession = createLineSession();
@@ -176,7 +178,6 @@
     if (next === lineId) {
       return;
     }
-    previousLineId = lineId;
     lineId = next;
   }
 
@@ -206,18 +207,22 @@
     return true;
   }
 
-  async function locateMe() {
-    locationNote = COPY.location_why;
-    const result = await requestClientLocation();
-    if (result.ok && flyIfInCity(result.longitude, result.latitude)) {
-      locationNote = null;
+  function toggleLocation() {
+    const watch = locationWatch;
+    if (!watch) {
       return;
     }
-    if (result.ok) {
-      locationNote = COPY.location_unavailable;
+    if (locationActive || watch.isActive()) {
+      watch.stop();
+      locationActive = false;
+      userLocation = null;
+      locationCentered = false;
       return;
     }
-    locationNote = result.reason === 'denied' ? COPY.location_denied : COPY.location_unavailable;
+    locationNote = null;
+    locationCentered = false;
+    locationActive = true;
+    watch.start();
   }
 
   onMount(() => {
@@ -245,6 +250,24 @@
     };
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
+    locationWatch = createLocationWatch({
+      onFix(location) {
+        userLocation = location;
+        locationActive = true;
+        if (!locationCentered && flyIfInCity(location.longitude, location.latitude)) {
+          locationCentered = true;
+        }
+      },
+      onError(reason) {
+        locationActive = false;
+        userLocation = null;
+        locationCentered = false;
+        if (!locationErrorShown) {
+          locationErrorShown = true;
+          locationNote = reason === 'denied' ? COPY.location_denied : COPY.location_unavailable;
+        }
+      },
+    });
     void loadLines().then(() => {
       ready = true;
     });
@@ -252,6 +275,7 @@
       clearInterval(clockTimer);
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
+      locationWatch?.stop();
     };
   });
 
@@ -286,7 +310,6 @@
     selectedStop = null;
     follow = false;
     followPaused = false;
-    showVehicleList = false;
     panel?.close();
     loadingSince = Date.now();
     loadFailed = false;
@@ -318,6 +341,7 @@
 
   onDestroy(() => {
     ready = false;
+    locationWatch?.stop();
     lineSession.destroy();
   });
 </script>
@@ -344,11 +368,6 @@
         </select>
       </label>
     </div>
-    <p class="status-line" aria-live="polite">
-      {liveStatus} · {visibleVehicles.length} colectivos · {newest
-        ? formatAge(newest, now)
-        : COPY.starting}
-    </p>
     <p class="visually-hidden" aria-live="polite" aria-atomic="true">
       {liveStatus}. {visibleVehicles.length} colectivos. {newest
         ? formatAge(newest, now)
@@ -382,6 +401,7 @@
           {showOutbound}
           {showInbound}
           {reducedMotion}
+          {userLocation}
           bind:mapFailed
           bind:mapControls
           selectedVehicleId={selectedLive?.vehicleId ?? null}
@@ -425,13 +445,8 @@
               aria-pressed={showOutbound}
               onclick={() => (showOutbound = !showOutbound)}
             >
-              {#if showOutbound}
-                <Eye size={18} strokeWidth={2.25} aria-hidden="true" />
-              {:else}
-                <EyeOff size={18} strokeWidth={2.25} aria-hidden="true" />
-              {/if}
               <span class="swatch outbound" aria-hidden="true"></span>
-              {COPY.view_ida}
+              {COPY.ida}
             </button>
           {/if}
           {#if inboundRoutes.length}
@@ -442,54 +457,13 @@
               aria-pressed={showInbound}
               onclick={() => (showInbound = !showInbound)}
             >
-              {#if showInbound}
-                <Eye size={18} strokeWidth={2.25} aria-hidden="true" />
-              {:else}
-                <EyeOff size={18} strokeWidth={2.25} aria-hidden="true" />
-              {/if}
               <span class="swatch inbound" aria-hidden="true"></span>
-              {COPY.view_vuelta}
+              {COPY.vuelta}
             </button>
           {/if}
         </div>
         {#if stopsUnavailable && routes.length > 0}
           <p class="hint">{COPY.stops_unavailable}</p>
-        {/if}
-        {#if visibleVehicles.length > 0}
-          <button
-            class="touch-btn"
-            type="button"
-            aria-expanded={showVehicleList}
-            onclick={() => (showVehicleList = !showVehicleList)}
-          >
-            Ver colectivos de esta línea ({visibleVehicles.length})
-          </button>
-        {/if}
-        {#if showVehicleList && visibleVehicles.length > 0}
-          <ul class="vehicle-list">
-            {#each visibleVehicles as vehicle (vehicle.vehicleId)}
-              <li>
-                <button
-                  type="button"
-                  onclick={(event) => openVehicle(vehicle, event.currentTarget)}
-                >
-                  {vehicleHeading(vehicle)} · {vehicle.vehicleId} · {formatAge(
-                    vehicle.observedAt,
-                    now,
-                  )}
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-        {#if previousLineId}
-          <button
-            class="touch-btn"
-            type="button"
-            onclick={() => chooseLine(previousLineId ?? lineId)}
-          >
-            {COPY.back_line(previousLineId)}
-          </button>
         {/if}
         {#if mapFailed}
           {#if visibleVehicles.length === 0}
@@ -534,11 +508,17 @@
       </button>
       <button
         class="icon-tool"
+        class:on={locationActive}
         type="button"
-        aria-label={COPY.my_location}
-        onclick={() => void locateMe()}
+        aria-pressed={locationActive}
+        aria-label={locationActive ? COPY.hide_my_location : COPY.my_location}
+        onclick={() => toggleLocation()}
       >
-        <Locate size={22} strokeWidth={2.25} aria-hidden="true" />
+        {#if locationActive}
+          <LocateFixed size={22} strokeWidth={2.25} aria-hidden="true" />
+        {:else}
+          <Locate size={22} strokeWidth={2.25} aria-hidden="true" />
+        {/if}
       </button>
       {#if followPaused && follow}
         <button class="touch-btn" type="button" onclick={() => (followPaused = false)}
@@ -611,15 +591,24 @@
       {/if}
       {#if debug}
         <div>
-          <dt>GPS</dt>
+          <dt>GPS raw</dt>
           <dd>{selectedLive.latitude.toFixed(5)}, {selectedLive.longitude.toFixed(5)}</dd>
+        </div>
+        <div>
+          <dt>observedAt</dt>
+          <dd>{selectedLive.observedAt}</dd>
+        </div>
+        <div>
+          <dt>age</dt>
+          <dd>{Math.round((now - Date.parse(selectedLive.observedAt)) / 1000)} s</dd>
         </div>
         <div>
           <dt>Match</dt>
           <dd>
-            {selectedLive.routeAssignmentSource ?? '—'} · {selectedLive.distanceFromRouteMeters ??
-              '—'} m ·
-            {Math.round((selectedLive.routeConfidence ?? 0) * 100)}% · {selectedLive.positionKind}
+            {selectedLive.matchedLatitude?.toFixed(5) ?? '—'}, {selectedLive.matchedLongitude?.toFixed(
+              5,
+            ) ?? '—'}
+            · {selectedLive.distanceFromRouteMeters ?? '—'} m · {selectedLive.positionKind}
           </dd>
         </div>
       {/if}

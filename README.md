@@ -56,7 +56,7 @@ GPSBahía track_data → GpsBahiaProvider → VehicleHub (por línea) → REST/S
 GPSBahía recorridos/paradas → StaticStore → /api/routes /api/stops
 ```
 
-Polling por demanda: una línea se consulta ~cada 10 s solo mientras hay clientes (o 2 min extra). Máximo 8 líneas activas. 100 usuarios en la 503 = 1 request upstream.
+Polling por demanda: una línea se consulta ~cada 5 s solo mientras hay clientes (o 2 min extra). Máximo 8 líneas activas. 100 usuarios en la 503 = 1 request upstream.
 
 ## Datos reales vs derivados
 

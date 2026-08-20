@@ -23,7 +23,8 @@ describe('loadConfig', () => {
 
   it('uses defaults when optional values are omitted', () => {
     const config = loadConfig({ TRANSIT_PROVIDER: 'mock', PORT: '3000' });
-    expect(config.realtimeRefreshMs).toBe(10_000);
+    expect(config.realtimeRefreshMs).toBe(5_000);
     expect(config.debugEndpoints).toBe(false);
+    expect(config.freshness.vehicleVisibleMaxAgeMs).toBe(120_000);
   });
 });

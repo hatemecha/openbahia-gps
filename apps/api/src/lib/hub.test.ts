@@ -34,8 +34,8 @@ class CountingProvider implements RealtimeProvider {
         routeId: '503',
         latitude: -38.7183,
         longitude: -62.2663,
-        observedAt: '2026-08-19T12:00:00.000Z',
-        receivedAt: '2026-08-19T12:00:00.000Z',
+        observedAt: new Date().toISOString(),
+        receivedAt: new Date().toISOString(),
         source: 'mock',
       },
     ];
@@ -77,6 +77,28 @@ describe('LineRealtimeManager / VehicleHub', () => {
     expect(hub.snapshot('503').data).toHaveLength(1);
     expect(hub.getMetrics().cacheHits).toBeGreaterThan(0);
     hub.stop();
+  });
+
+  it('refreshes when the cache is older than the poll interval', async () => {
+    const provider = new CountingProvider();
+    const hub = new VehicleHub({
+      provider,
+      refreshMs: 5_000,
+      idleTtlMs: 120_000,
+      maxActiveLines: 8,
+      freshness: { liveAfterMs: 30_000, staleAfterMs: 120_000, veryStaleAfterMs: 120_000 },
+      logger: { info() {}, warn() {}, error() {} } as never,
+    });
+    await hub.ensureLine('503');
+    expect(provider.calls).toBe(1);
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 6_000);
+    try {
+      await hub.ensureLine('503');
+      expect(provider.calls).toBe(2);
+    } finally {
+      nowSpy.mockRestore();
+      hub.stop();
+    }
   });
 
   it('keeps last vehicles when a later refresh fails', async () => {
@@ -128,7 +150,7 @@ describe('LineRealtimeManager / VehicleHub', () => {
     hub.stop();
   });
 
-  it('holds a unit missing from one successful response and drops it after the grace window', async () => {
+  it('does not hold missing units as ghost vehicles on the public snapshot', async () => {
     let calls = 0;
     const observedAt = () => new Date().toISOString();
     const provider: RealtimeProvider = {
@@ -171,16 +193,160 @@ describe('LineRealtimeManager / VehicleHub', () => {
     expect(hub.snapshot('503').data.map((vehicle) => vehicle.vehicleId).sort()).toEqual(['A', 'B']);
 
     await hub.refresh();
-    expect(hub.snapshot('503').data.map((vehicle) => vehicle.vehicleId).sort()).toEqual(['A', 'B']);
-
-    const afterGrace = Date.now() + 31_000;
-    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(afterGrace);
-    try {
-      await hub.refresh();
-    } finally {
-      nowSpy.mockRestore();
-    }
     expect(hub.snapshot('503').data.map((vehicle) => vehicle.vehicleId)).toEqual(['A']);
     hub.stop();
+  });
+
+  it('keeps stale GPSBahia units on the public snapshot because the official map still draws them', async () => {
+    const now = Date.parse('2026-08-19T12:00:00.000Z');
+    const iso = (offsetMs: number) => new Date(now - offsetMs).toISOString();
+    const provider: RealtimeProvider = {
+      id: 'gpsbahia',
+      async isAvailable() {
+        return true;
+      },
+      async getAvailability() {
+        return { available: true };
+      },
+      async getLines() {
+        return [{ id: '506', name: '506' }];
+      },
+      async getVehicles() {
+        return [
+          {
+            vehicleId: 'SG 23',
+            lineId: '506',
+            latitude: -38.7183,
+            longitude: -62.2663,
+            observedAt: iso(20_000),
+            receivedAt: iso(0),
+            source: 'gpsbahia',
+          },
+          {
+            vehicleId: 'SG 60',
+            lineId: '506',
+            latitude: -38.7193,
+            longitude: -62.2663,
+            observedAt: iso(60_000),
+            receivedAt: iso(0),
+            source: 'gpsbahia',
+          },
+          {
+            vehicleId: 'SG 40',
+            lineId: '506',
+            latitude: -38.72,
+            longitude: -62.26,
+            observedAt: iso(5 * 60_000),
+            receivedAt: iso(0),
+            source: 'gpsbahia',
+          },
+        ];
+      },
+    };
+    const hub = new VehicleHub({
+      provider,
+      refreshMs: 10_000,
+      idleTtlMs: 120_000,
+      maxActiveLines: 8,
+      freshness: {
+        liveAfterMs: 30_000,
+        staleAfterMs: 120_000,
+        veryStaleAfterMs: 120_000,
+        vehicleVisibleMaxAgeMs: 120_000,
+      },
+      logger: { info() {}, warn() {}, error() {} } as never,
+    });
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+    try {
+      await hub.ensureLine('506');
+      expect(hub.snapshot('506').data.map((vehicle) => vehicle.vehicleId).sort()).toEqual([
+        'SG 23',
+        'SG 40',
+        'SG 60',
+      ]);
+    } finally {
+      nowSpy.mockRestore();
+      hub.stop();
+    }
+  });
+
+  it('keeps a fresh off-route bus on raw GPS without snapping or inventing nextStop', async () => {
+    const now = Date.parse('2026-08-19T12:00:00.000Z');
+    const rawLatitude = -38.72 + 250 / 111_320;
+    const provider: RealtimeProvider = {
+      id: 'gpsbahia',
+      async isAvailable() {
+        return true;
+      },
+      async getAvailability() {
+        return { available: true };
+      },
+      async getLines() {
+        return [{ id: '513', name: '513' }];
+      },
+      async getVehicles() {
+        return [
+          {
+            vehicleId: 'SG-off',
+            lineId: '513',
+            routeId: '513',
+            latitude: rawLatitude,
+            longitude: -62.26,
+            observedAt: new Date(now - 15_000).toISOString(),
+            receivedAt: new Date(now).toISOString(),
+            source: 'gpsbahia',
+            direction: 'outbound',
+            routeAssignmentSource: 'provider',
+          },
+        ];
+      },
+    };
+    const hub = new VehicleHub({
+      provider,
+      refreshMs: 10_000,
+      idleTtlMs: 120_000,
+      maxActiveLines: 8,
+      freshness: { liveAfterMs: 30_000, staleAfterMs: 120_000, veryStaleAfterMs: 120_000 },
+      logger: { info() {}, warn() {}, error() {} } as never,
+      staticStore: {
+        getRoutes: () => [
+          {
+            id: 'out',
+            lineId: '513',
+            direction: 'outbound',
+            source: 'test',
+            path: [
+              { latitude: -38.72, longitude: -62.28 },
+              { latitude: -38.72, longitude: -62.24 },
+            ],
+          },
+        ],
+        getStops: () => [
+          {
+            id: 'next',
+            name: 'Falsa',
+            latitude: -38.72,
+            longitude: -62.25,
+            routeIds: ['out'],
+            source: 'test',
+          },
+        ],
+        getLines: () => [{ id: '513', name: '513' }],
+        getStaticDataState: () => 'ready',
+      } as never,
+    });
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+    try {
+      await hub.ensureLine('513');
+      const vehicle = hub.snapshot('513').data[0];
+      expect(vehicle?.vehicleId).toBe('SG-off');
+      expect(vehicle?.latitude).toBe(rawLatitude);
+      expect(vehicle?.longitude).toBe(-62.26);
+      expect(vehicle?.positionKind).toBe('gps');
+      expect(vehicle?.nextStop).toBeUndefined();
+    } finally {
+      nowSpy.mockRestore();
+      hub.stop();
+    }
   });
 });

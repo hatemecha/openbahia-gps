@@ -6,6 +6,10 @@ import {
 } from '@openbahia/transit-core';
 import type { TransitRoute, VehiclePosition } from './types';
 
+/** v0.1: the marker is the last valid GPS fix. Re-enable later for smoothing. */
+export const VISUAL_ROUTE_INTERPOLATION = false;
+export const VISUAL_GEO_INTERPOLATION = false;
+
 export interface AnimatedVehicle {
   vehicleId: string;
   lineId?: string;
@@ -27,14 +31,10 @@ export interface AnimatedVehicle {
 }
 
 export function displayCoords(vehicle: VehiclePosition): GeoPoint {
-  if (
-    vehicle.positionKind === 'map-matched' &&
-    vehicle.matchedLatitude !== undefined &&
-    vehicle.matchedLongitude !== undefined
-  ) {
-    return { latitude: vehicle.matchedLatitude, longitude: vehicle.matchedLongitude };
-  }
-  return { latitude: vehicle.latitude, longitude: vehicle.longitude };
+  return {
+    latitude: vehicle.latitude,
+    longitude: vehicle.longitude,
+  };
 }
 
 export function displayPoint(
@@ -42,7 +42,7 @@ export function displayPoint(
   nowMs: number,
   route?: TransitRoute,
 ): GeoPoint & { bearing?: number } {
-  if (vehicle.skipInterpolation) {
+  if (vehicle.skipInterpolation || (!VISUAL_GEO_INTERPOLATION && !VISUAL_ROUTE_INTERPOLATION)) {
     return {
       ...vehicle.to,
       bearing: vehicle.toBearing,
@@ -50,6 +50,7 @@ export function displayPoint(
   }
   const t = Math.min(1, Math.max(0, (nowMs - vehicle.startedAt) / vehicle.durationMs));
   if (
+    VISUAL_ROUTE_INTERPOLATION &&
     route &&
     vehicle.vehicle.positionKind === 'map-matched' &&
     vehicle.fromProgress !== undefined &&
@@ -63,6 +64,12 @@ export function displayPoint(
         bearing: interpolateBearing(vehicle.fromBearing, vehicle.toBearing, t),
       };
     }
+  }
+  if (!VISUAL_GEO_INTERPOLATION) {
+    return {
+      ...vehicle.to,
+      bearing: vehicle.toBearing,
+    };
   }
   const point = interpolatePosition(vehicle.from, vehicle.to, t);
   return {

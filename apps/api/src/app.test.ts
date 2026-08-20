@@ -18,7 +18,7 @@ describe('API with MockProvider', () => {
   beforeAll(async () => {
     app = await buildApp({
       config,
-      provider: new MockProvider(() => Date.parse('2026-08-19T12:00:00.000Z')),
+      provider: new MockProvider(),
       startPolling: false,
       logger: false,
     });

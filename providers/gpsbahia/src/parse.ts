@@ -80,11 +80,16 @@ export function parseGpsBahiaTrackPayload(
   const receivedAt = options.receivedAt ?? new Date().toISOString();
   const source = options.source ?? 'gpsbahia';
   const line = resolveRouteId(options.routeId) ?? resolveRouteId(options.rawRouteId);
+  const requestedLineId = line?.id ?? options.routeId;
+  const requestedRawRouteId = options.rawRouteId ?? line?.rawRouteId;
   const vehicles: VehiclePosition[] = [];
 
   for (const row of rows) {
     const item = asRecord(row);
     if (!item) {
+      continue;
+    }
+    if (!rowMatchesRequestedLine(item, requestedLineId, requestedRawRouteId)) {
       continue;
     }
     const latitude = asNumber(item.lat);
@@ -105,8 +110,8 @@ export function parseGpsBahiaTrackPayload(
     const providerDirection = parseGpsBahiaDirection(asString(item.direccion));
     const parsed = parseVehiclePosition({
       vehicleId,
-      lineId: line?.id ?? options.routeId,
-      routeId: line?.id ?? options.routeId,
+      lineId: requestedLineId,
+      routeId: requestedLineId,
       latitude,
       longitude,
       bearing: bearingRaw === null ? undefined : normalizeBearing(bearingRaw),
@@ -114,7 +119,7 @@ export function parseGpsBahiaTrackPayload(
       observedAt,
       receivedAt,
       source,
-      rawRouteId: options.rawRouteId ?? line?.rawRouteId,
+      rawRouteId: requestedRawRouteId,
       direction: providerDirection,
       routeAssignmentSource: providerDirection === 'unknown' ? 'unknown' : 'provider',
       positionKind: 'gps',
@@ -125,6 +130,51 @@ export function parseGpsBahiaTrackPayload(
   }
 
   return vehicles;
+}
+
+/**
+ * GPSBahia track_data rows typically have no line identity
+ * (`interno`, `lat`, `lng`, `direccion`, `dt_tracker`, `imei`, ...).
+ * If a row actually carries one of the keys below, it is validated and never relabeled.
+ */
+const OBSERVED_LINE_IDENTITY_KEYS = new Set(['linea_id', 'line_id', 'route_id', 'linea', 'route']);
+
+export function observedTrackRowLineId(row: Record<string, unknown>): string | null {
+  for (const key of Object.keys(row)) {
+    if (!OBSERVED_LINE_IDENTITY_KEYS.has(key.toLowerCase())) {
+      continue;
+    }
+    const value = asString(row[key]);
+    if (value) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function rowMatchesRequestedLine(
+  row: Record<string, unknown>,
+  requestedLineId: string | undefined,
+  requestedRawRouteId: string | undefined,
+): boolean {
+  const identity = observedTrackRowLineId(row);
+  if (!identity) {
+    return true;
+  }
+  if (requestedLineId && identity === requestedLineId) {
+    return true;
+  }
+  if (requestedRawRouteId && identity === requestedRawRouteId) {
+    return true;
+  }
+  const resolved = resolveRouteId(identity);
+  if (resolved && requestedLineId && resolved.id === requestedLineId) {
+    return true;
+  }
+  if (resolved && requestedRawRouteId && resolved.rawRouteId === requestedRawRouteId) {
+    return true;
+  }
+  return false;
 }
 
 export function parseGpsBahiaDirection(value: string | null): TravelDirection {

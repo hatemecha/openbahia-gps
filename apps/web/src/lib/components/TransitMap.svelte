@@ -1,11 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import {
-    BAHIA_BLANCA_CENTER,
-    haversineMeters,
-    routesToGeoJson,
-    stopsToGeoJson,
-  } from '@openbahia/transit-core';
+  import { BAHIA_BLANCA_CENTER, routesToGeoJson, stopsToGeoJson } from '@openbahia/transit-core';
   import type { MapControls, TransitRoute, TransitStop, VehiclePosition } from '$lib/types';
   import {
     directionSpokenLabel,
@@ -13,6 +8,7 @@
     markerDirectionClass,
   } from '$lib/direction-visibility';
   import { createRouteArrowImage, createStopIconImage } from '$lib/map-icons';
+  import type { ClientLocation } from '$lib/location';
   import { displayCoords, displayPoint, type AnimatedVehicle } from '$lib/motion';
 
   const COLOR_OUTBOUND = '#b42318';
@@ -28,6 +24,7 @@
     selectedVehicleId = null,
     followVehicleId = null,
     reducedMotion = false,
+    userLocation = null,
     /* eslint-disable no-useless-assignment -- $bindable is the parent contract */
     mapFailed = $bindable(false),
     mapControls = $bindable<MapControls | null>(null),
@@ -45,6 +42,7 @@
     selectedVehicleId?: string | null;
     followVehicleId?: string | null;
     reducedMotion?: boolean;
+    userLocation?: ClientLocation | null;
     mapFailed?: boolean;
     mapControls?: MapControls | null;
     onSelectVehicle?: (vehicle: VehiclePosition | null) => void;
@@ -56,15 +54,15 @@
   let map: import('maplibre-gl').Map | undefined;
   const markers = new Map<string, import('maplibre-gl').Marker>();
   const animated = new Map<string, AnimatedVehicle>();
+  let userMarker: import('maplibre-gl').Marker | undefined;
   let raf = 0;
   let maplibre: typeof import('maplibre-gl') | undefined;
   let mapReady = $state(false);
   let lastFittedLine = '';
   let destroyed = false;
 
-  const DURATION_MS = $derived(reducedMotion ? 0 : 4000);
-  const MAX_JUMP_M = 800;
-  const STOP_MIN_ZOOM = 13;
+  const DURATION_MS = 0;
+  const STOP_MIN_ZOOM = 14.5;
 
   const visibleRoutes = $derived(
     routes.filter((route) => isDirectionVisible(route.direction, showOutbound, showInbound)),
@@ -144,7 +142,6 @@
     }
     const route = routes.find((item) => item.id === previous.matchedRouteId);
     const from = displayPoint(previous, performance.now(), route);
-    const jump = haversineMeters(from, to);
     const next: AnimatedVehicle = {
       vehicleId: vehicle.vehicleId,
       lineId: vehicle.lineId,
@@ -158,7 +155,7 @@
       observedAt: vehicle.observedAt,
       receivedAt: vehicle.receivedAt,
       source: vehicle.source,
-      skipInterpolation: reducedMotion || jump > MAX_JUMP_M,
+      skipInterpolation: true,
       fromProgress: previous.toProgress,
       toProgress: vehicle.routeProgress,
       matchedRouteId: vehicle.matchedRouteId,
@@ -166,6 +163,44 @@
     };
     animated.set(vehicle.vehicleId, next);
     return next;
+  }
+
+  function matchDebugGeoJson() {
+    if (!debug) {
+      return { type: 'FeatureCollection' as const, features: [] };
+    }
+    const features: Array<{
+      type: 'Feature';
+      properties: { kind: string; vehicleId: string };
+      geometry:
+        | { type: 'LineString'; coordinates: [number, number][] }
+        | { type: 'Point'; coordinates: [number, number] };
+    }> = [];
+    for (const vehicle of visibleVehicles) {
+      if (vehicle.matchedLatitude === undefined || vehicle.matchedLongitude === undefined) {
+        continue;
+      }
+      features.push({
+        type: 'Feature',
+        properties: { kind: 'link', vehicleId: vehicle.vehicleId },
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [vehicle.longitude, vehicle.latitude],
+            [vehicle.matchedLongitude, vehicle.matchedLatitude],
+          ],
+        },
+      });
+      features.push({
+        type: 'Feature',
+        properties: { kind: 'matched', vehicleId: vehicle.vehicleId },
+        geometry: {
+          type: 'Point',
+          coordinates: [vehicle.matchedLongitude, vehicle.matchedLatitude],
+        },
+      });
+    }
+    return { type: 'FeatureCollection', features };
   }
 
   function syncSources() {
@@ -176,6 +211,39 @@
     routeSource?.setData(routesToGeoJson(visibleRoutes) as never);
     const stopSource = map.getSource('stops') as import('maplibre-gl').GeoJSONSource | undefined;
     stopSource?.setData(stopsToGeoJson(visibleStops) as never);
+    const debugSource = map.getSource('debug-match') as
+      import('maplibre-gl').GeoJSONSource | undefined;
+    debugSource?.setData(matchDebugGeoJson() as never);
+  }
+
+  function createUserMarkerElement(): HTMLDivElement {
+    const root = document.createElement('div');
+    root.className = 'user-marker';
+    root.setAttribute('aria-label', 'Tu ubicación');
+    const halo = document.createElement('span');
+    halo.className = 'user-marker-halo';
+    const dot = document.createElement('span');
+    dot.className = 'user-marker-dot';
+    root.append(halo, dot);
+    return root;
+  }
+
+  function syncUserMarker() {
+    if (!map || !maplibre || !mapReady) {
+      return;
+    }
+    if (!userLocation) {
+      userMarker?.remove();
+      userMarker = undefined;
+      return;
+    }
+    if (!userMarker) {
+      userMarker = new maplibre.Marker({ element: createUserMarkerElement(), anchor: 'center' })
+        .setLngLat([userLocation.longitude, userLocation.latitude])
+        .addTo(map);
+      return;
+    }
+    userMarker.setLngLat([userLocation.longitude, userLocation.latitude]);
   }
 
   function fitRoutes() {
@@ -286,7 +354,15 @@
   $effect(() => {
     void visibleRoutes;
     void visibleStops;
+    void visibleVehicles;
+    void debug;
     syncSources();
+  });
+
+  $effect(() => {
+    void userLocation;
+    void mapReady;
+    syncUserMarker();
   });
 
   $effect(() => {
@@ -336,6 +412,7 @@
         }
         map.addSource('routes', { type: 'geojson', data: routesToGeoJson([]) as never });
         map.addSource('stops', { type: 'geojson', data: stopsToGeoJson([]) as never });
+        map.addSource('debug-match', { type: 'geojson', data: matchDebugGeoJson() as never });
         map.addLayer({
           id: 'routes-outbound',
           type: 'line',
@@ -401,8 +478,8 @@
             minzoom: STOP_MIN_ZOOM,
             layout: {
               'icon-image': 'bus-stop',
-              'icon-size': 1,
-              'icon-allow-overlap': true,
+              'icon-size': 0.7,
+              'icon-allow-overlap': false,
               'icon-ignore-placement': true,
             },
           });
@@ -413,13 +490,37 @@
             source: 'stops',
             minzoom: STOP_MIN_ZOOM,
             paint: {
-              'circle-radius': 5,
-              'circle-color': '#f7f8fa',
-              'circle-stroke-color': '#141820',
-              'circle-stroke-width': 1.6,
+              'circle-radius': 3.5,
+              'circle-color': '#e8ebef',
+              'circle-stroke-color': '#6b7280',
+              'circle-stroke-width': 1,
+              'circle-opacity': 0.85,
             },
           });
         }
+        map.addLayer({
+          id: 'debug-match-lines',
+          type: 'line',
+          source: 'debug-match',
+          filter: ['==', ['get', 'kind'], 'link'],
+          paint: {
+            'line-color': '#7c3aed',
+            'line-width': 1.5,
+            'line-opacity': 0.75,
+          },
+        });
+        map.addLayer({
+          id: 'debug-match-points',
+          type: 'circle',
+          source: 'debug-match',
+          filter: ['==', ['get', 'kind'], 'matched'],
+          paint: {
+            'circle-radius': 4,
+            'circle-color': '#7c3aed',
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 1,
+          },
+        });
         map.on('click', stopLayer, (event) => {
           const id = event.features?.[0]?.properties?.id as string | undefined;
           const stop = stops.find((item) => item.id === id) ?? null;
@@ -446,6 +547,7 @@
         mapReady = true;
         mapFailed = false;
         syncSources();
+        syncUserMarker();
       });
       mapControls = {
         zoomIn: () => map?.zoomIn({ duration: reducedMotion ? 0 : 250 }),
@@ -476,6 +578,8 @@
       marker.remove();
     }
     markers.clear();
+    userMarker?.remove();
+    userMarker = undefined;
     map?.remove();
   });
 </script>
@@ -484,7 +588,21 @@
   <div class="map" bind:this={container} role="application" aria-label="Mapa de colectivos"></div>
   {#if debug}
     <div class="debug-float">
-      {vehicles.length} GPS · {routes.length} recorridos · {stops.length} paradas
+      <div>{vehicles.length} GPS · {routes.length} recorridos · {stops.length} paradas</div>
+      {#each visibleVehicles as vehicle (vehicle.vehicleId)}
+        <div>
+          {vehicle.vehicleId}
+          raw {vehicle.latitude.toFixed(5)},{vehicle.longitude.toFixed(5)}
+          obs {vehicle.observedAt}
+          age {Math.round((Date.now() - Date.parse(vehicle.observedAt)) / 1000)}s dir {vehicle.direction ??
+            '—'}
+          matched {vehicle.matchedLatitude?.toFixed(5) ?? '—'},{vehicle.matchedLongitude?.toFixed(
+            5,
+          ) ?? '—'}
+          dist {vehicle.distanceFromRouteMeters ?? '—'}
+          {vehicle.positionKind ?? 'gps'}
+        </div>
+      {/each}
     </div>
   {/if}
 </div>

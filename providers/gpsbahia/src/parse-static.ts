@@ -4,6 +4,7 @@ import {
   lineByRawRouteId,
   parseTravelDirection,
   resolveRouteId,
+  type CatalogLine,
   type TransitLine,
   type TransitRoute,
   type TransitStop,
@@ -118,6 +119,42 @@ export function parseGpsBahiaLinesFromHtml(html: string): TransitLine[] {
       hasRealtime: true,
     };
   });
+}
+
+function normalizeLineToken(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/**
+ * Homepage catalog is the primary public-line → rawRouteId mapping.
+ * The hardcoded Bahia catalog is fallback/aliases only.
+ */
+export function resolveCurrentGpsBahiaLine(
+  publicLine: string,
+  html: string | null | undefined,
+): CatalogLine | undefined {
+  const fallback = resolveRouteId(publicLine);
+  if (!html) {
+    return fallback;
+  }
+  const fromHome = parseGpsBahiaLinesFromHtml(html);
+  const needle = normalizeLineToken(publicLine);
+  const hit =
+    fromHome.find((line) => normalizeLineToken(line.id) === needle) ??
+    fromHome.find((line) => normalizeLineToken(line.name) === needle) ??
+    fromHome.find((line) =>
+      line.shortName ? normalizeLineToken(line.shortName) === needle : false,
+    ) ??
+    fromHome.find((line) => line.rawRouteId === publicLine);
+  if (!hit?.rawRouteId) {
+    return fallback;
+  }
+  return {
+    id: hit.id,
+    name: hit.name,
+    shortName: hit.shortName ?? hit.name,
+    rawRouteId: hit.rawRouteId,
+  };
 }
 
 export function parseGpsBahiaStops(

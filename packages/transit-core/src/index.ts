@@ -53,11 +53,14 @@ export {
   ageMs,
   cacheFreshness,
   DEFAULT_FRESHNESS_CONFIG,
+  DEFAULT_VEHICLE_VISIBLE_MAX_AGE_MS,
   freshnessFromTimestamp,
   freshnessLevel,
   isStale,
+  isVehiclePubliclyVisible,
   parseTimestampToIso,
   unixSecondsToIso,
+  vehicleVisibleMaxAgeMs,
 } from './time.js';
 export {
   BAHIA_BLANCA_BOUNDS,

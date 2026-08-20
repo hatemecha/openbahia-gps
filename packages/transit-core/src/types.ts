@@ -145,6 +145,7 @@ export interface FreshnessConfig {
   liveAfterMs: number;
   staleAfterMs: number;
   veryStaleAfterMs: number;
+  vehicleVisibleMaxAgeMs?: number;
 }
 
 export function assertNever(value: never, message = 'Unhandled union member'): never {
