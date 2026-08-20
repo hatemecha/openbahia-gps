@@ -12,18 +12,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.1
+          run_install: false
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.5.1
-          run_install: false
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -35,7 +35,7 @@ jobs:
         run: pnpm test
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium webkit
+        run: pnpm --filter @openbahia/web exec playwright install --with-deps chromium webkit
 
       - name: E2E tests
         run: pnpm test:e2e
@@ -48,4 +48,3 @@ jobs:
 
       - name: Build
         run: pnpm build
-

@@ -8,8 +8,10 @@ test.describe('OpenBahía mock journey', () => {
     const select = page.getByLabel(/colectivo querés ver/i);
     await expect(select).toBeVisible();
     await select.selectOption('503');
-    await expect(page.getByRole('button', { name: 'IDA' })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole('button', { name: 'VUELTA' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'IDA', exact: true })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByRole('button', { name: 'VUELTA', exact: true })).toBeVisible();
     await expect(page.getByRole('application', { name: 'Mapa de colectivos' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Acercar' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Alejar' })).toBeVisible();

@@ -1,6 +1,6 @@
 # OpenBahía Transit
 
-Mapa abierto de colectivos de **Bahía Blanca**: GPS en vivo, recorridos de ida/vuelta, paradas y sentido, sin pedir acceso especial a nadie.
+Mapa abierto de colectivos de **Bahía Blanca**: ubicación de unidades, recorridos de ida/vuelta, paradas y sentido, sin pedir acceso especial a nadie.
 
 El frontend nunca habla con GPSBahía ni con Firebase. Todo pasa por nuestro backend.
 
@@ -19,21 +19,21 @@ pnpm dev
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, `pnpm build`. Smoke opcional contra GPS real: `pnpm test:live` (no corre en CI).
 
-## Estado alpha (y qué esperar)
-Este repo es una **alpha**: está diseñado para ser resiliente ante fallos de sesión/caché y errores upstream, pero todavía puede haber limitaciones en flujos concretos cuando se usa GPS real.
+## Estado alpha
 
-Para reproducibilidad (y desarrollo en CI), usá `pnpm test` y `pnpm test:e2e`: el realtime en ese caso usa `MockProvider` (no llama a GPS real).
-El smoke contra GPS real (`pnpm test:live`) es opcional y puede fallar o ser omitido.
+El proyecto sigue en **alpha**. El objetivo de esta etapa es que el flujo básico sea confiable: elegir una línea, ver su recorrido y ver únicamente ubicaciones suficientemente recientes y plausibles para esa línea.
+
+Para reproducibilidad y CI, `pnpm test` y `pnpm test:e2e` usan `MockProvider` y no consultan GPS real. El smoke contra GPS real (`pnpm test:live`) es opcional.
 
 ## Qué muestra
 
 Elegís una línea (por ejemplo 503) y ves:
 
 - traza **IDA** y **VUELTA**
-- colectivos sobre esas trazas, con sentido cuando la fuente o el matching lo permiten
+- unidades con una posición reciente y compatible con el recorrido cuando hay geometría disponible
 - paradas de esa línea
-- posición GPS real y última actualización
-- próxima parada en metros (sin ETA)
+- sentido informado por la fuente cuando está disponible
+- próxima parada solamente cuando el matching es confiable
 
 La ubicación del usuario (**Mi ubicación**) se pide solo al tocar el botón, queda en el teléfono y **no** se envía al backend.
 
@@ -43,27 +43,37 @@ La ubicación del usuario (**Mi ubicación**) se pide solo al tocar el botón, q
 
 | Valor | Qué hace |
 | --- | --- |
-| `gpsbahia` | **Predeterminado.** Cliente web público de GPSBahía. Verificado en vivo. |
-| `gpsbus` | Firebase RTDB de ColectivosYa. Legible, pero las marcas de tiempo estaban congeladas el 2026-07-18. |
-| `mock` | Demostración local. La UI dice **Modo demostración**. |
-
-El realtime de gpsbus congelado **no** impide usar sus archivos estáticos públicos como fallback de recorridos.
+| `gpsbahia` | **Predeterminado.** Consume el feed público usado por el cliente web de GPSBahía. |
+| `gpsbus` | Firebase RTDB de ColectivosYa. Se conserva como provider alternativo. |
+| `mock` | Demostración local. La UI indica que no son datos reales. |
 
 ## Arquitectura
 
-```
-GPSBahía track_data → GpsBahiaProvider → VehicleHub (por línea) → REST/SSE → MapLibre
+```text
+GPSBahía track_data → GpsBahiaProvider → VehicleHub → REST/SSE → MapLibre
 GPSBahía recorridos/paradas → StaticStore → /api/routes /api/stops
 ```
 
-Polling por demanda: una línea se consulta ~cada 5 s solo mientras hay clientes (o 2 min extra). Máximo 8 líneas activas. 100 usuarios en la 503 = 1 request upstream.
+Polling por demanda: una línea se consulta aproximadamente cada 5 s mientras tiene clientes activos, con cache y single-flight para no multiplicar requests upstream.
+
+## Criterio de publicación de posiciones
+
+OpenBahía conserva las coordenadas GPS originales; el map matching no mueve el marker público.
+
+Antes de publicar una unidad se descartan:
+
+- fixes más viejos que la ventana configurada (`VEHICLE_VISIBLE_MAX_AGE_MS`)
+- saltos GPS físicamente implausibles
+- posiciones de GPSBahía claramente fuera del recorrido cuando existe una geometría válida para esa línea
+
+Si el recorrido no está disponible, la ausencia de matching no oculta una posición reciente y válida.
 
 ## Datos reales vs derivados
 
-- **GPS:** observado (lat/lng originales siempre en la API).
-- **Sentido:** si GPSBahía manda `direccion`, se usa. Si no, matching. Si no hay confianza: «Sentido sin determinar».
-- **Posición sobre la calle:** opcional, solo con confianza alta.
-- **Recorridos/paradas:** estáticos, cacheados en `data/cache/` (no se redistribuyen en git).
+- **GPS:** latitud/longitud observadas por el provider.
+- **Sentido:** si GPSBahía manda `direccion`, se conserva como dato autoritativo.
+- **Matching:** solo metadata para progreso/próxima parada; no altera la posición pública.
+- **Recorridos/paradas:** datos estáticos cacheados en `data/cache/`.
 
 ## Licencias
 
