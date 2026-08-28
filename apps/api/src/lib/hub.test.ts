@@ -269,7 +269,7 @@ describe('LineRealtimeManager / VehicleHub', () => {
     }
   });
 
-  it('filters fresh fixes outside the trusted route corridor', async () => {
+  it('keeps fresh valid fixes when route matching is uncertain', async () => {
     const now = Date.parse('2026-08-19T12:00:00.000Z');
     const rawLatitude = -38.72 + 100 / 111_320;
     const provider: RealtimeProvider = {
@@ -337,7 +337,11 @@ describe('LineRealtimeManager / VehicleHub', () => {
     const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
     try {
       await hub.ensureLine('513');
-      expect(hub.snapshot('513').data).toEqual([]);
+      const [vehicle] = hub.snapshot('513').data;
+      expect(vehicle?.vehicleId).toBe('SG-off');
+      expect(vehicle?.routeMatchState).toBe('uncertain');
+      expect(vehicle?.positionKind).toBe('gps');
+      expect(vehicle?.nextStop).toBeUndefined();
     } finally {
       nowSpy.mockRestore();
       hub.stop();

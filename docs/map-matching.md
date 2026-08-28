@@ -1,10 +1,10 @@
 # Map matching
 
-OpenBahía **conserva el GPS original**. El ajuste a la polilínea es opcional, se marca como derivado y solo se usa para dibujar cuando supera los umbrales de confianza.
+OpenBahía **conserva y dibuja el GPS original**. El punto sobre la polilínea es derivado y queda disponible para progreso, próxima parada y debug, pero no desplaza el marker.
 
 ## Cuándo no inferir
 
-Si GPSBahía envía `direccion: "ida"|"vuelta"`, se usa como prior pero se comparan ambas geometrías. Esto es necesario porque el feed puede etiquetar todas las unidades como `ida`; una contradicción clara de rumbo y recorrido puede clasificar correctamente una unidad como VUELTA.
+Si GPSBahía envía `direccion: "ida"|"vuelta"`, se usa como prior, pero se comparan ambas geometrías. Una contradicción clara de rumbo y recorrido puede clasificar correctamente una unidad como VUELTA cuando el feed etiqueta una unidad de forma errónea.
 
 Si no hay sentido, se compara el vehículo con los recorridos de **esa línea**.
 
@@ -27,10 +27,10 @@ No se voltea IDA↔VUELTA por ruido GPS. Si el candidato nuevo apenas mejora al 
 | Uso | Condición |
 | --- | --- |
 | Mostrar sentido IDA/VUELTA | provider, o confianza ≥ 0.58 y distancia ≤ 80 m |
-| Dibujar posición ajustada | `routeMatchState === matched` y confianza ≥ 0.68 y distancia ≤ 45 m |
+| Flecha del marker | mismo criterio; el rumbo publicado se alinea al segmento emparejado |
 | Fuera de recorrido | distancia > 180 m → `routeMatchState: off-route` |
 
-El GPS original **siempre** se conserva internamente. Con geometría disponible, los estados `uncertain` y `off-route` no se publican en el mapa cotidiano; reaparecen cuando un fix posterior obtiene un match confiable. Sin geometría, se muestra el GPS reciente y válido para no ocultar toda la línea.
+El GPS original **siempre** se conserva y se publica. Con geometría disponible, `uncertain` y `off-route` impiden inferir progreso o próxima parada, pero no esconden una unidad con fix reciente, válido y físicamente plausible.
 
 La validación de trayectoria admite 120 m de error base más una velocidad máxima de 45 m/s durante ventanas de hasta 2 minutos. Un salto que excede esa envolvente no entra al matching ni a la presentación.
 

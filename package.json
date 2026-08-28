@@ -10,12 +10,18 @@
     "node": ">=22"
   },
   "scripts": {
+    "build:packages": "pnpm --filter @openbahia/transit-core build && pnpm --filter @openbahia/shared build && pnpm --filter @openbahia/provider-mock build && pnpm --filter @openbahia/provider-gpsbus build && pnpm --filter @openbahia/provider-gpsbahia build",
+    "predev": "pnpm build:packages",
     "dev": "concurrently -n api,web -c blue,green \"pnpm --filter @openbahia/api dev\" \"pnpm --filter @openbahia/web dev\"",
+    "predev:share": "pnpm build:packages",
     "dev:share": "node scripts/dev-share.mjs",
-    "build": "pnpm --filter @openbahia/transit-core build && pnpm --filter @openbahia/shared build && pnpm --filter @openbahia/provider-mock build && pnpm --filter @openbahia/provider-gpsbus build && pnpm --filter @openbahia/provider-gpsbahia build && pnpm --filter @openbahia/api build && pnpm --filter @openbahia/web build",
+    "build": "pnpm build:packages && pnpm --filter @openbahia/api build && pnpm --filter @openbahia/web build",
+    "pretest": "pnpm build:packages",
     "test": "pnpm -r --if-present test",
+    "pretest:e2e": "pnpm build:packages && pnpm --filter @openbahia/api build",
     "test:e2e": "pnpm --filter @openbahia/web test:e2e",
     "test:live": "LIVE_GPS=1 pnpm --filter @openbahia/api exec vitest run src/live.test.ts",
+    "bootstrap:static": "pnpm --filter @openbahia/api exec tsx ../../scripts/generate-static-bootstrap.ts",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck",
     "format": "prettier --write ."

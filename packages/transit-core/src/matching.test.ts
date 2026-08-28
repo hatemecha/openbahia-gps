@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   MATCH_DISPLAY_DISTANCE_M,
   MATCH_DISPLAY_RELEASE_DISTANCE_M,
+  alignBearingWithRoute,
   classifyRouteMatch,
   enrichMatchedVehicle,
   matchVehicleToRoutes,
   shouldUseMatchedPosition,
 } from './matching.js';
+import { circularAngleDiff } from './polyline.js';
 import { nextStopAlongRoute } from './next-stop.js';
 import { parseTravelDirection } from './direction.js';
 import type { TransitRoute, TransitStop } from './types.js';
@@ -163,6 +165,26 @@ describe('route matching', () => {
     expect(match?.assignmentSource).toBe('map-matching');
   });
 
+  it('aligns display bearing with the matched route when GPS heading is reversed', () => {
+    expect(alignBearingWithRoute(47, 307)).toBeCloseTo(227, 0);
+    const vehicle = {
+      vehicleId: 'M-arrow',
+      lineId: '503',
+      latitude: -38.72015,
+      longitude: -62.26,
+      bearing: 47,
+      observedAt: '2026-08-19T12:00:00.000Z',
+      receivedAt: '2026-08-19T12:00:00.000Z',
+      source: 'gpsbahia',
+      direction: 'outbound' as const,
+      routeAssignmentSource: 'provider' as const,
+    };
+    const match = matchVehicleToRoutes(vehicle, [outbound, inbound]);
+    const enriched = enrichMatchedVehicle({ vehicle, match, routes: [outbound, inbound], stops: [] });
+    expect(enriched.bearing).toBeDefined();
+    expect(circularAngleDiff(enriched.bearing!, match!.segmentBearing)).toBeLessThanOrEqual(90);
+  });
+
   it('lets a clear heading contradiction override provider ida end to end', () => {
     const match = matchVehicleToRoutes(
       {
@@ -230,6 +252,7 @@ describe('route matching', () => {
       previousPositionKind: 'map-matched',
     });
     expect(held.positionKind).toBe('map-matched');
+
   });
 
   it('still releases the snapped position when the bus really leaves the route', () => {

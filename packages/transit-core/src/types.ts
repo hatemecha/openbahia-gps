@@ -116,6 +116,7 @@ export interface RouteMatch {
   progress: number;
   confidence: number;
   matchedPoint: GeoPoint;
+  segmentBearing: number;
   assignmentSource: RouteAssignmentSource;
 }
 

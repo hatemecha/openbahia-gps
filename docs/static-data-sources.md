@@ -46,3 +46,7 @@ Portal: https://datos.bahia.gob.ar/ dataset «Recorrido de Colectivos».
 3. Solo sin caché usable: GPSBahía → gpsbus Storage → CSV municipal.
 
 `metadata.json` guarda `{ source, version, fetchedAt, checksum, schemaVersion }`. Escritura atómica.
+
+## Bootstrap versionado
+
+`data/bootstrap/bahia-routes.json` permite servir recorridos municipales en un primer arranque sin red. Se regenera de forma reproducible con `pnpm bootstrap:static`, usando el parser municipal que usa la API. El archivo no agrega paradas: el dataset municipal no las publica.

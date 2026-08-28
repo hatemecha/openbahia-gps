@@ -6,6 +6,7 @@ import type { RealtimeProvider } from '@openbahia/transit-core';
 import { VehicleHub } from './lib/hub.js';
 import { createSessionManager, createStaticProviders } from './lib/providers.js';
 import { StaticStore } from './lib/static-store.js';
+import { isAllowedCorsOrigin } from './lib/cors-origin.js';
 import { registerRoutes } from './routes.js';
 
 export interface BuildAppOptions {
@@ -18,6 +19,9 @@ export interface BuildAppOptions {
 
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
+    // An empty list means direct connections only. Deployments opt in to the
+    // exact proxy addresses they operate behind; never trust arbitrary headers.
+    trustProxy: options.config.trustedProxyIps.length > 0 ? options.config.trustedProxyIps : false,
     logger:
       options.logger === false
         ? false
@@ -61,13 +65,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         callback(null, true);
         return;
       }
-      try {
-        const url = new URL(origin);
-        const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-        callback(null, local || origin === options.config.publicApiUrl);
-      } catch {
-        callback(null, false);
-      }
+      callback(null, isAllowedCorsOrigin(origin, options.config));
     },
     methods: ['GET'],
   });

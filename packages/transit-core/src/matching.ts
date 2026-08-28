@@ -119,6 +119,7 @@ function snapToRoute(
       providerDirection,
     }),
     matchedPoint: snap.point,
+    segmentBearing: snap.segmentBearing,
     assignmentSource,
   };
 }
@@ -165,7 +166,6 @@ export function matchVehicleToRoutes(
   }
   const point = { latitude: vehicle.latitude, longitude: vehicle.longitude };
   const providerDirection = providerReportedDirection(vehicle);
-
   let best: RouteMatch | null = null;
   for (const route of routes) {
     const candidate = snapToRoute(point, route, vehicle, context, 'map-matching');
@@ -278,6 +278,17 @@ export function enrichMatchedVehicle(args: {
     isDeterminedDirection(vehicle.direction)
       ? vehicle.direction
       : undefined;
+  const direction = providerDirection
+    ? providerDirection
+    : routeMatchState === 'matched' || routeMatchState === 'uncertain'
+      ? match.direction
+      : vehicle.direction;
+  const bearing =
+    isDeterminedDirection(direction) &&
+    match.distanceFromRouteMeters <= MATCH_ON_ROUTE_DISTANCE_M &&
+    (routeMatchState === 'matched' || routeMatchState === 'uncertain')
+      ? alignBearingWithRoute(vehicle.bearing, match.segmentBearing)
+      : vehicle.bearing;
 
   return {
     ...vehicle,
@@ -287,16 +298,31 @@ export function enrichMatchedVehicle(args: {
     routeProgress: match.progress,
     routeConfidence: match.confidence,
     distanceFromRouteMeters: match.distanceFromRouteMeters,
-    direction: providerDirection
-      ? providerDirection
-      : routeMatchState === 'matched' || routeMatchState === 'uncertain'
-        ? match.direction
-        : vehicle.direction,
+    direction,
+    bearing,
     routeAssignmentSource: match.assignmentSource,
     positionKind: useMatched ? 'map-matched' : 'gps',
     routeMatchState,
     nextStop,
   };
+}
+
+/** Keeps the map arrow consistent with the matched route when GPS heading is reversed or noisy. */
+export function alignBearingWithRoute(
+  rawBearing: number | undefined,
+  segmentBearing: number,
+): number {
+  if (rawBearing === undefined) {
+    return segmentBearing;
+  }
+  if (circularAngleDiff(rawBearing, segmentBearing) <= 90) {
+    return rawBearing;
+  }
+  const flipped = (rawBearing + 180) % 360;
+  if (circularAngleDiff(flipped, segmentBearing) <= 90) {
+    return flipped;
+  }
+  return segmentBearing;
 }
 
 export function directionIsReliable(match: RouteMatch | null | undefined): boolean {

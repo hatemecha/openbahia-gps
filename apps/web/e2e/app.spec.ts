@@ -35,6 +35,16 @@ test.describe('OpenBahía mock journey', () => {
       'rgb(180, 35, 24)',
     );
     await expect(firstBusMarker.locator('.bus-arrow')).toBeVisible();
+    await expect(page.locator('.bus-marker.outbound').first()).toBeVisible();
+    await expect(page.locator('.bus-marker.inbound').first()).toBeVisible();
+    await expect(page.locator('.bus-marker.inbound').first().locator('.bus-dot')).toHaveCSS(
+      'background-color',
+      'rgb(11, 110, 153)',
+    );
+    await expect(firstBusMarker).toHaveCSS('width', '44px');
+    await expect(firstBusMarker).toHaveCSS('height', '44px');
+    await expect(firstBusMarker.locator('.bus-dot')).toHaveCSS('width', '26px');
+    await expect(firstBusMarker.locator('.bus-dot')).toHaveCSS('height', '26px');
     await page
       .getByRole('button', { name: /unidad M-32|unidad M-18/ })
       .first()
@@ -46,6 +56,33 @@ test.describe('OpenBahía mock journey', () => {
     await expect(select.locator('option[value="504"]')).toHaveCount(1, { timeout: 15_000 });
     await select.selectOption('504');
     await expect(page.getByText(/Volver a/)).toHaveCount(0);
+  });
+
+  test('layout stays usable at supported mobile and desktop widths', async ({ page }) => {
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
+      await page.goto('/');
+      await expect(page.getByLabel(/colectivo querés ver/i)).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Mostrar mi ubicación' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'IDA', exact: true })).toBeVisible({
+        timeout: 20_000,
+      });
+      await expect(page.getByRole('button', { name: 'VUELTA', exact: true })).toBeVisible();
+      const viewport = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.clientWidth);
+      for (const control of [
+        page.getByRole('button', { name: 'IDA', exact: true }),
+        page.getByRole('button', { name: 'VUELTA', exact: true }),
+        page.getByRole('button', { name: 'Mostrar mi ubicación' }),
+      ]) {
+        const box = await control.boundingBox();
+        expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+        expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+      }
+    }
   });
 
   test('no units, upstream fail, mobile, zoom, offline', async ({ page, context }) => {

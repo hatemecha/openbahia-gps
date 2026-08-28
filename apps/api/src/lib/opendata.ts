@@ -45,7 +45,7 @@ function parseCsvRows(text: string): string[][] {
 }
 
 function parseWktLineString(wkt: string): Array<{ latitude: number; longitude: number }> {
-  const match = wkt.match(/LINESTRING\s*\((.+)\)/i);
+  const match = wkt.match(/LINESTRING(?:\s+Z)?\s*\((.+)\)/i);
   if (!match?.[1]) {
     return [];
   }
@@ -76,7 +76,9 @@ function parseRouteName(name: string): { lineId: string; direction: TransitRoute
 
 export function parseMunicipalRouteCsv(text: string, source = 'bahia-opendata'): TransitRoute[] {
   const rows = parseCsvRows(text);
-  const header = rows[0]?.map((cell) => cell.trim().toLowerCase()) ?? [];
+  // The current CKAN export appends `;;` to the final header cell. Strip only
+  // that exporter suffix so normal CSV fixtures remain unchanged.
+  const header = rows[0]?.map((cell) => cell.trim().toLowerCase().replace(/;+$/, '')) ?? [];
   const nameIndex = header.findIndex((cell) => cell === 'name');
   const wktIndex = header.findIndex((cell) => cell === 'wkt');
   if (nameIndex < 0 || wktIndex < 0) {
@@ -97,6 +99,33 @@ export function parseMunicipalRouteCsv(text: string, source = 'bahia-opendata'):
     const parsed = parseRouteName(name);
     routes.push({
       id: `opendata-${parsed.lineId}-${parsed.direction}-${i}`,
+      lineId: parsed.lineId,
+      name,
+      direction: parsed.direction,
+      path,
+      source,
+    });
+  }
+  if (routes.length > 0) {
+    return routes;
+  }
+
+  // CKAN's current export is malformed CSV: it starts a quoted name then
+  // continues straight into an escaped quoted description. Its WKT payload is
+  // still complete and one record per line, so recover only that known shape.
+  for (const [index, row] of text.split(/\r?\n/).entries()) {
+    const name = row.match(/^"([^",]+(?:\s+(?:Ida|Vuelta))?),""/i)?.[1];
+    const wkt = row.match(/""(LINESTRING(?:\s+Z)?\s*\(.+\))""";*$/i)?.[1];
+    if (!name || !wkt) {
+      continue;
+    }
+    const path = parseWktLineString(wkt);
+    if (path.length < 2) {
+      continue;
+    }
+    const parsed = parseRouteName(name);
+    routes.push({
+      id: `opendata-${parsed.lineId}-${parsed.direction}-${index}`,
       lineId: parsed.lineId,
       name,
       direction: parsed.direction,

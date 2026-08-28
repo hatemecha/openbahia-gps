@@ -477,12 +477,6 @@ export class VehicleHub {
       if (!isVehiclePubliclyVisible(vehicle, now, maxAgeMs)) {
         return false;
       }
-      if (
-        vehicle.routeMatchState === 'off-route' ||
-        vehicle.routeMatchState === 'uncertain'
-      ) {
-        return false;
-      }
       return true;
     });
   }

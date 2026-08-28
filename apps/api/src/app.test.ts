@@ -89,6 +89,15 @@ describe('API with MockProvider', () => {
     expect(body.meta.count).toBe(2);
   });
 
+  it('GET /api/vehicles?lineId=503 exposes both ida and vuelta for mock service', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/vehicles?lineId=503' });
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { data: Array<{ direction?: string }> };
+    const directions = new Set(body.data.map((vehicle) => vehicle.direction));
+    expect(directions.has('outbound')).toBe(true);
+    expect(directions.has('inbound')).toBe(true);
+  });
+
   it('GET /api/ready is 200 when static data is present', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/ready' });
     expect(response.statusCode).toBe(200);
@@ -98,5 +107,21 @@ describe('API with MockProvider', () => {
   it('rejects garbage line ids', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/vehicles?lineId=<script>' });
     expect(response.statusCode).toBe(400);
+  });
+
+  it('allows loopback CORS but does not reflect arbitrary browser origins', async () => {
+    const local = await app.inject({
+      method: 'GET',
+      url: '/api/health',
+      headers: { origin: 'http://localhost:5173' },
+    });
+    expect(local.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+
+    const remote = await app.inject({
+      method: 'GET',
+      url: '/api/health',
+      headers: { origin: 'https://untrusted.example' },
+    });
+    expect(remote.headers['access-control-allow-origin']).toBeUndefined();
   });
 });

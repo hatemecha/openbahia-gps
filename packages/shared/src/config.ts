@@ -17,6 +17,8 @@ export interface AppConfig {
   realtimeMaxConcurrentRequests: number;
   freshness: FreshnessConfig;
   publicApiUrl: string;
+  corsAllowedOrigins: string[];
+  trustedProxyIps: string[];
   gpsbahiaBaseUrl: string;
   gpsbusDatabaseUrl: string;
   gpsbusCityKey: string;
@@ -77,6 +79,27 @@ function readProvider(value: string | undefined): ProviderId {
   }
 }
 
+function readCommaSeparated(name: string, env: NodeJS.ProcessEnv): string[] {
+  const raw = env[name];
+  if (!raw?.trim()) {
+    return [];
+  }
+  return raw
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function readOrigins(env: NodeJS.ProcessEnv): string[] {
+  return readCommaSeparated('CORS_ALLOWED_ORIGINS', env).map((origin) => {
+    try {
+      return new URL(origin).origin;
+    } catch {
+      throw new ConfigError(`CORS_ALLOWED_ORIGINS contains an invalid origin (${JSON.stringify(origin)})`);
+    }
+  });
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const liveAfterMs = readOptionalNumber('LIVE_AFTER_MS', DEFAULT_FRESHNESS_CONFIG.liveAfterMs, env, 1);
   const staleAfterMs = readOptionalNumber(
@@ -115,6 +138,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       vehicleVisibleMaxAgeMs,
     },
     publicApiUrl: env.PUBLIC_API_URL ?? 'http://localhost:3000',
+    corsAllowedOrigins: readOrigins(env),
+    trustedProxyIps: readCommaSeparated('TRUSTED_PROXY_IPS', env),
     gpsbahiaBaseUrl: env.GPSBAHIA_BASE_URL ?? 'https://www.gpsbahia.com.ar/',
     gpsbusDatabaseUrl:
       env.GPSBUS_DATABASE_URL ?? 'https://gps-bus-7811f-default-rtdb.firebaseio.com',

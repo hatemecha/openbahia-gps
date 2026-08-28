@@ -1,9 +1,11 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { mkdtempSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import type { StaticTransitProvider, TransitLine, TransitRoute, TransitStop } from '@openbahia/transit-core';
+import { parseTransitRoutes } from '@openbahia/transit-core';
 import { StaticStore } from './static-store.js';
 
 const route: TransitRoute = {
@@ -79,6 +81,52 @@ describe('StaticStore', () => {
     });
     const dataset = await store.load();
     expect(dataset.metadata.source).toBe('gpsbus');
+  });
+
+  it('upgrades bootstrap municipal data to GPSBahía on first refresh', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ob-static-'));
+    const bootstrapPath = join(dir, 'bootstrap.json');
+    const bootstrapRoutes = [
+      {
+        id: 'opendata-513-unknown-1',
+        lineId: '513',
+        name: '513',
+        direction: 'unknown' as const,
+        source: 'bahia-opendata',
+        path: [
+          { latitude: -38.72, longitude: -62.28 },
+          { latitude: -38.72, longitude: -62.24 },
+        ],
+      },
+    ];
+    const parsedRoutes = parseTransitRoutes(bootstrapRoutes);
+    expect(parsedRoutes.success).toBe(true);
+    const bootstrap = {
+      metadata: {
+        source: 'bahia-opendata',
+        version: 'boot',
+        fetchedAt: '2026-08-19T00:00:00.000Z',
+        checksum: createHash('sha256')
+          .update(JSON.stringify({ routes: parsedRoutes.data, stops: [] }))
+          .digest('hex'),
+        schemaVersion: 2,
+      },
+      lines: [{ id: '513', name: '513', hasRoutes: true }],
+      routes: bootstrapRoutes,
+      stops: [],
+    };
+    await writeFile(bootstrapPath, JSON.stringify(bootstrap));
+
+    const store = new StaticStore({
+      cacheDir: join(dir, 'cache'),
+      bootstrapPath,
+      providers: [provider('gpsbahia', [route, { ...route, id: 'gb-12', direction: 'inbound' }])],
+    });
+    await store.loadFromCache();
+    expect(store.getMetadata()?.source).toBe('bahia-opendata');
+    const dataset = await store.refresh();
+    expect(dataset.metadata.source).toBe('gpsbahia');
+    expect(dataset.routes.some((item) => item.direction === 'inbound')).toBe(true);
   });
 
   it('keeps routes when stops provider fails', async () => {

@@ -31,6 +31,13 @@ export interface StaticStoreOptions {
 
 const SNAPSHOT_FILE = 'static-snapshot.json';
 
+/** Sources that already carry provider-grade geometry; refresh in-place only. */
+const PRIMARY_STATIC_SOURCES = new Set(['gpsbahia', 'gpsbus']);
+
+function isPrimaryStaticSource(source: string | undefined): boolean {
+  return source !== undefined && PRIMARY_STATIC_SOURCES.has(source);
+}
+
 function checksumFor(routes: TransitRoute[], stops: TransitStop[]): string {
   return createHash('sha256')
     .update(JSON.stringify({ routes, stops }))
@@ -186,10 +193,14 @@ export class StaticStore {
   }
 
   private async refreshInternal(): Promise<CachedStaticDataset> {
-    const cached = this.dataset ?? (await this.readCache());
-    if (cached) {
+    const diskCache = await this.readCache();
+    const cached = diskCache ?? this.dataset;
+
+    if (cached && isPrimaryStaticSource(cached.metadata.source)) {
       this.dataset = cached;
-      const sameSource = this.options.providers.find((provider) => provider.id === cached.metadata.source);
+      const sameSource = this.options.providers.find(
+        (provider) => provider.id === cached.metadata.source,
+      );
       if (sameSource) {
         const refreshed = await this.tryProvider(sameSource);
         if (refreshed) {
@@ -215,7 +226,12 @@ export class StaticStore {
       return dataset;
     }
 
-    const bootstrap = await this.readBootstrap();
+    if (diskCache) {
+      this.dataset = diskCache;
+      return diskCache;
+    }
+
+    const bootstrap = this.dataset ?? (await this.readBootstrap());
     if (bootstrap) {
       this.dataset = bootstrap;
       return bootstrap;

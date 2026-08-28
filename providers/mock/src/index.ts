@@ -51,11 +51,11 @@ const BUSES: MockBus[] = [
     phaseMs: 6 * 60_000,
     path: [
       { latitude: -38.7186, longitude: -62.2655 },
-      { latitude: -38.7142, longitude: -62.2721 },
-      { latitude: -38.7078, longitude: -62.2784 },
-      { latitude: -38.7029, longitude: -62.271 },
-      { latitude: -38.7084, longitude: -62.2622 },
       { latitude: -38.7158, longitude: -62.2588 },
+      { latitude: -38.7084, longitude: -62.2622 },
+      { latitude: -38.7029, longitude: -62.271 },
+      { latitude: -38.7078, longitude: -62.2784 },
+      { latitude: -38.7142, longitude: -62.2721 },
       { latitude: -38.7186, longitude: -62.2655 },
     ],
   },
@@ -187,7 +187,8 @@ export class MockProvider implements RealtimeProvider {
         receivedAt,
         source: this.id,
         rawRouteId: `mock-${bus.routeId}`,
-        direction: bus.vehicleId === 'M-55' ? 'inbound' : 'outbound',
+        direction:
+          bus.vehicleId === 'M-18' || bus.vehicleId === 'M-55' ? 'inbound' : 'outbound',
         routeAssignmentSource: 'unknown',
         positionKind: 'gps',
       });
@@ -218,20 +219,15 @@ export class MockStaticProvider implements StaticTransitProvider {
         source: 'mock',
       });
     }
-    const routes = [...unique.values()].flatMap((route) => {
-      if (route.lineId !== '503') {
-        return [route];
-      }
-      return [
-        route,
-        {
-          ...route,
-          id: `${route.id}-inbound`,
-          direction: 'inbound' as const,
-          path: [...route.path].reverse(),
-        },
-      ];
-    });
+    const routes = [...unique.values()].flatMap((route) => [
+      route,
+      {
+        ...route,
+        id: `${route.id}-inbound`,
+        direction: 'inbound' as const,
+        path: [...route.path].reverse(),
+      },
+    ]);
     return options?.lineId ? routes.filter((route) => route.lineId === options.lineId) : routes;
   }
 

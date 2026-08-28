@@ -151,7 +151,7 @@ input {
   flex: 1;
   font-weight: 700;
   letter-spacing: 0.04em;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   color: var(--muted);
   background: #eef1f4;
   padding: 0.35rem 0.5rem;
@@ -404,8 +404,8 @@ input {
 
 .bus-marker {
   --marker-color: var(--unknown);
-  width: 32px;
-  height: 32px;
+  width: var(--touch);
+  height: var(--touch);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -419,8 +419,8 @@ input {
 
 .bus-arrow {
   position: absolute;
-  left: 11px;
-  top: -9px;
+  left: 17px;
+  top: -3px;
   width: 10px;
   height: 16px;
   background: var(--marker-color);

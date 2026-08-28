@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { isPlausibleLineId, reasonPhrase, routesToGeoJson } from '@openbahia/transit-core';
 import { clientKey, MemoryRateLimit } from './lib/rate-limit.js';
+import { isAllowedCorsOrigin } from './lib/cors-origin.js';
 
 function queryString(request: FastifyRequest, key: string): string | undefined {
   const value = (request.query as Record<string, unknown>)[key];
@@ -219,12 +220,17 @@ async function openSse(
   onClose: () => void,
 ): Promise<void> {
   reply.hijack();
+  const origin = request.headers.origin;
+  const corsHeaders =
+    origin && isAllowedCorsOrigin(origin, app.appConfig)
+      ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+      : {};
   reply.raw.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
     Connection: 'keep-alive',
-    'Access-Control-Allow-Origin': request.headers.origin ?? '*',
     'X-Content-Type-Options': 'nosniff',
+    ...corsHeaders,
   });
   reply.raw.write(': connected\n\n');
 

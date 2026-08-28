@@ -19,7 +19,7 @@ const sample: VehiclePosition = {
 };
 
 describe('displayCoords', () => {
-  it('uses a high-confidence matched position when the backend marks it for display', () => {
+  it('always uses the last valid GPS position, even when matching metadata exists', () => {
     const shown = displayCoords({
       ...sample,
       latitude: -38.7,
@@ -28,8 +28,8 @@ describe('displayCoords', () => {
       matchedLongitude: -62.26,
       positionKind: 'map-matched',
     });
-    expect(shown.latitude).toBe(-38.71);
-    expect(shown.longitude).toBe(-62.26);
+    expect(shown.latitude).toBe(-38.7);
+    expect(shown.longitude).toBe(-62.25);
   });
 
   it('keeps raw GPS when matching is not approved for display', () => {

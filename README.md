@@ -27,6 +27,8 @@ Imprime una URL local, una URL HTTPS y un QR para abrir desde el teléfono. `Ctr
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, `pnpm build`. Smoke opcional contra GPS real: `pnpm test:live` (no corre en CI).
 
+Para publicar el frontend en GitHub Pages, ver [docs/development.md#despliegue-web-github-pages](docs/development.md#despliegue-web-github-pages).
+
 ## Estado alpha
 
 El proyecto sigue en **alpha**. El objetivo de esta etapa es que el flujo básico sea confiable: elegir una línea, ver su recorrido y ver únicamente ubicaciones suficientemente recientes y plausibles para esa línea.
@@ -66,13 +68,13 @@ Polling por demanda: una línea se consulta aproximadamente cada 5 s mientras ti
 
 ## Criterio de publicación de posiciones
 
-OpenBahía conserva las coordenadas GPS originales en la respuesta. Para dibujar el marker puede usar el punto más cercano del recorrido únicamente cuando el matching es fuerte (≤45 m y confianza ≥0.68), igual que el criterio de intersección de recorrido usado por ColectivosYa.
+OpenBahía conserva y dibuja las coordenadas GPS originales en la respuesta. El matching con el recorrido es solo metadato para sentido, progreso, próxima parada y debug; nunca desplaza visualmente el colectivo.
 
 Antes de publicar una unidad se descartan:
 
 - fixes más viejos que la ventana configurada (`VEHICLE_VISIBLE_MAX_AGE_MS`)
 - saltos GPS físicamente implausibles
-- posiciones `uncertain` u `off-route` cuando existe una geometría válida
+- unidades con línea incorrecta o datos inválidos; un matching `uncertain` u `off-route` por sí solo no oculta un GPS fresco y plausible
 
 La ventana predeterminada es de 2 minutos. Solo se muestran matches confiables; si una línea todavía no tiene geometría, se conserva el GPS reciente y válido en vez de ocultar todo el servicio.
 
@@ -80,7 +82,7 @@ La ventana predeterminada es de 2 minutos. Solo se muestran matches confiables; 
 
 - **GPS:** latitud/longitud observadas por el provider.
 - **Sentido:** `direccion` se usa como prior; rumbo, geometría y continuidad pueden corregirlo cuando la evidencia es fuerte.
-- **Matching:** conserva el GPS crudo, pero la presentación usa el punto ajustado solo con evidencia fuerte; progreso y próxima parada siguen siendo derivados.
+- **Matching:** conserva el GPS crudo y solo aporta metadatos derivados; progreso y próxima parada requieren confianza suficiente.
 - **Recorridos/paradas:** datos estáticos cacheados en `data/cache/`.
 
 ## Privacidad y servicios externos
