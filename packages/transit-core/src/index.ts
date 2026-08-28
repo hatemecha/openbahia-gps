@@ -109,8 +109,9 @@ export { nextStopAlongRoute } from './next-stop.js';
 export { routesToGeoJson, stopsToGeoJson } from './geojson.js';
 export {
   GPS_FUTURE_SLACK_MS,
-  GPS_JUMP_METERS,
   GPS_JUMP_WINDOW_MS,
+  GPS_MAX_PLAUSIBLE_SPEED_MPS,
+  GPS_POSITION_ERROR_M,
   LINE_ID_PATTERN,
   STATIC_SCHEMA_VERSION,
   classifyGpsObservation,

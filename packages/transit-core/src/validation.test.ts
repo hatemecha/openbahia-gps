@@ -64,6 +64,28 @@ describe('GPS observation validation', () => {
     ).toBe('jump');
   });
 
+  it('uses elapsed time to reject fast GPS teleports without rejecting normal movement', () => {
+    const previous = { point: { latitude: -38.72, longitude: -62.28 }, at: now };
+    expect(
+      classifyGpsObservation({
+        point: { latitude: -38.7195, longitude: -62.2795 },
+        observedAt: '2026-08-19T12:00:05.000Z',
+        receivedAt: '2026-08-19T12:00:06.000Z',
+        previous,
+        nowMs: now + 6000,
+      }),
+    ).toBe('ok');
+    expect(
+      classifyGpsObservation({
+        point: { latitude: -38.714, longitude: -62.28 },
+        observedAt: '2026-08-19T12:00:05.000Z',
+        receivedAt: '2026-08-19T12:00:06.000Z',
+        previous,
+        nowMs: now + 6000,
+      }),
+    ).toBe('jump');
+  });
+
   it('accepts plausible line ids and rejects garbage', () => {
     expect(isPlausibleLineId('503')).toBe(true);
     expect(isPlausibleLineId('500-2')).toBe(true);

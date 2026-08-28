@@ -1,7 +1,3 @@
-export type LocationResult =
-  | { ok: true; latitude: number; longitude: number; accuracy?: number }
-  | { ok: false; reason: 'denied' | 'unavailable' | 'unsupported' };
-
 export interface ClientLocation {
   latitude: number;
   longitude: number;
@@ -16,33 +12,24 @@ export interface LocationWatch {
   isActive: () => boolean;
 }
 
-export function requestClientLocation(): Promise<LocationResult> {
-  if (!navigator.geolocation) {
-    return Promise.resolve({ ok: false, reason: 'unsupported' });
-  }
-  return new Promise((resolve) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          ok: true,
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        });
-      },
-      (error) => {
-        resolve({
-          ok: false,
-          reason: error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable',
-        });
-      },
-      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 30_000 },
-    );
-  });
+export const MAX_TRUSTED_LOCATION_ACCURACY_M = 75;
+export const NAVIGATION_READY_ACCURACY_M = 30;
+
+export function isNavigationReadyLocation(location: ClientLocation): boolean {
+  return location.accuracy !== undefined && location.accuracy <= NAVIGATION_READY_ACCURACY_M;
+}
+
+function clientLocation(position: GeolocationPosition): ClientLocation {
+  return {
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+    accuracy: position.coords.accuracy,
+  };
 }
 
 export function createLocationWatch(handlers: {
   onFix: (location: ClientLocation) => void;
+  onImprecise?: (location: ClientLocation) => void;
   onError: (reason: LocationWatchError) => void;
 }): LocationWatch {
   let watchId: number | null = null;
@@ -64,17 +51,21 @@ export function createLocationWatch(handlers: {
     }
     watchId = navigator.geolocation.watchPosition(
       (position) => {
-        handlers.onFix({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        });
+        const location = clientLocation(position);
+        if (
+          location.accuracy !== undefined &&
+          location.accuracy > MAX_TRUSTED_LOCATION_ACCURACY_M
+        ) {
+          handlers.onImprecise?.(location);
+          return;
+        }
+        handlers.onFix(location);
       },
       (error) => {
         stop();
         handlers.onError(error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable');
       },
-      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 5_000 },
+      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
     );
   };
 

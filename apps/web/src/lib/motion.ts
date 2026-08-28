@@ -31,6 +31,16 @@ export interface AnimatedVehicle {
 }
 
 export function displayCoords(vehicle: VehiclePosition): GeoPoint {
+  if (
+    vehicle.positionKind === 'map-matched' &&
+    Number.isFinite(vehicle.matchedLatitude) &&
+    Number.isFinite(vehicle.matchedLongitude)
+  ) {
+    return {
+      latitude: vehicle.matchedLatitude as number,
+      longitude: vehicle.matchedLongitude as number,
+    };
+  }
   return {
     latitude: vehicle.latitude,
     longitude: vehicle.longitude,

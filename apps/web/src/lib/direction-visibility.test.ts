@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isDirectionVisible, markerDirectionClass } from './direction-visibility';
+import {
+  isDirectionVisible,
+  markerDirectionClass,
+  markerPresentationClassName,
+} from './direction-visibility';
 
 describe('direction visibility', () => {
   it('hides inbound buses when vuelta is off', () => {
@@ -24,5 +28,15 @@ describe('direction visibility', () => {
     expect(markerDirectionClass('outbound')).toBe('outbound');
     expect(markerDirectionClass('unknown')).toBe('unknown');
     expect(markerDirectionClass(undefined)).toBe('unknown');
+  });
+
+  it('preserves MapLibre positioning classes when marker state changes', () => {
+    expect(
+      markerPresentationClassName(
+        'bus-marker outbound maplibregl-marker maplibregl-marker-anchor-center',
+        'inbound',
+        true,
+      ),
+    ).toBe('bus-marker maplibregl-marker maplibregl-marker-anchor-center inbound selected');
   });
 });

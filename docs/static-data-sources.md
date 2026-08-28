@@ -37,7 +37,7 @@ Portal: https://datos.bahia.gob.ar/ dataset «Recorrido de Colectivos».
 | CSV | **Hecho:** WKT `LINESTRING` con nombres `500 Ida` / `500 Vuelta`. ~93 KB. |
 | KMZ | Existe; OpenBahía no lo parsea en el frontend. El backend usa CSV. |
 | Paradas | Este dataset no cubre paradas. |
-| Licencia | Portal de datos abiertos municipal. Atribuir al Municipio de Bahía Blanca. El código AGPL-3.0 no otorga derecho a republicar el CSV. |
+| Licencia | Portal de datos abiertos municipal. Atribuir al Municipio de Bahía Blanca. El código AGPL-3.0-only no otorga derecho a republicar el CSV. |
 
 ## Resolución automática
 

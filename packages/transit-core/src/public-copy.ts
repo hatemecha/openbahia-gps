@@ -58,8 +58,15 @@ export const COPY = {
   hide_my_location: 'Ocultar mi ubicación',
   location_why:
     'Usamos tu ubicación solo en este teléfono para centrar el mapa. No la enviamos al servidor.',
+  location_searching: 'Buscando tu ubicación con la mejor precisión disponible…',
+  location_unknown_accuracy: 'Ubicación visible. El dispositivo no informó su precisión.',
+  location_precise: (accuracy: number) => `Ubicación precisa (±${accuracy} m).`,
+  location_refining: (accuracy: number) =>
+    `Ubicación visible (±${accuracy} m). Mejorando precisión para navegación…`,
   location_denied: 'No hay permiso de ubicación. El mapa sigue funcionando igual.',
   location_unavailable: 'No pudimos leer tu ubicación. El mapa sigue funcionando.',
+  location_imprecise: (accuracy: number) =>
+    `Ubicación aproximada (±${accuracy} m). Seguimos buscando una lectura GPS mejor…`,
   close: 'Cerrar',
   reload_map: 'Recargar mapa',
   zoom_in: 'Acercar',

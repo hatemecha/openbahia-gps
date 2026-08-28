@@ -17,7 +17,11 @@
     statusCaption,
     vehicleHeading,
   } from '$lib/format';
-  import { createLocationWatch, type ClientLocation } from '$lib/location';
+  import {
+    createLocationWatch,
+    isNavigationReadyLocation,
+    type ClientLocation,
+  } from '$lib/location';
   import { loadPrefs, savePrefs } from '$lib/prefs';
   import { connectRealtime } from '$lib/realtime';
   import { createLineSession } from '$lib/state/line-session';
@@ -52,6 +56,8 @@
   let locationActive = $state(false);
   let userLocation = $state<ClientLocation | null>(null);
   let locationCentered = $state(false);
+  let locationAutoCenterAllowed = $state(true);
+  let locationCenteredAccuracy = $state(Number.POSITIVE_INFINITY);
   let locationErrorShown = $state(false);
   let locationWatch = $state<ReturnType<typeof createLocationWatch> | null>(null);
   let loadingSince = $state<number | null>(null);
@@ -199,12 +205,30 @@
     lastFocused?.focus();
   }
 
-  function flyIfInCity(longitude: number, latitude: number): boolean {
-    if (!isInBahiaBlancaIngest({ latitude, longitude })) {
+  function flyIfInCity(location: ClientLocation): boolean {
+    const { longitude, latitude, accuracy } = location;
+    const controls = mapControls;
+    if (!controls || !isInBahiaBlancaIngest({ latitude, longitude })) {
       return false;
     }
-    mapControls?.flyTo(longitude, latitude);
+    controls.flyTo(longitude, latitude, accuracy);
     return true;
+  }
+
+  function showLocation(location: ClientLocation, note: string | null) {
+    userLocation = location;
+    locationActive = true;
+    locationNote = note;
+    const accuracy = location.accuracy ?? Number.POSITIVE_INFINITY;
+    const substantiallyBetter = accuracy < locationCenteredAccuracy / 2;
+    if (
+      locationAutoCenterAllowed &&
+      (!locationCentered || substantiallyBetter) &&
+      flyIfInCity(location)
+    ) {
+      locationCentered = true;
+      locationCenteredAccuracy = accuracy;
+    }
   }
 
   function toggleLocation() {
@@ -217,11 +241,17 @@
       locationActive = false;
       userLocation = null;
       locationCentered = false;
+      locationAutoCenterAllowed = true;
+      locationCenteredAccuracy = Number.POSITIVE_INFINITY;
+      locationNote = null;
       return;
     }
-    locationNote = null;
+    locationNote = COPY.location_searching;
     locationCentered = false;
+    locationAutoCenterAllowed = true;
+    locationCenteredAccuracy = Number.POSITIVE_INFINITY;
     locationActive = true;
+    locationErrorShown = false;
     watch.start();
   }
 
@@ -252,16 +282,24 @@
     window.addEventListener('offline', onOffline);
     locationWatch = createLocationWatch({
       onFix(location) {
-        userLocation = location;
-        locationActive = true;
-        if (!locationCentered && flyIfInCity(location.longitude, location.latitude)) {
-          locationCentered = true;
-        }
+        const accuracy = location.accuracy;
+        const note =
+          accuracy === undefined
+            ? COPY.location_unknown_accuracy
+            : isNavigationReadyLocation(location)
+              ? COPY.location_precise(Math.round(accuracy))
+              : COPY.location_refining(Math.round(accuracy));
+        showLocation(location, note);
+      },
+      onImprecise(location) {
+        showLocation(location, COPY.location_imprecise(Math.round(location.accuracy ?? 0)));
       },
       onError(reason) {
         locationActive = false;
         userLocation = null;
         locationCentered = false;
+        locationAutoCenterAllowed = true;
+        locationCenteredAccuracy = Number.POSITIVE_INFINITY;
         if (!locationErrorShown) {
           locationErrorShown = true;
           locationNote = reason === 'denied' ? COPY.location_denied : COPY.location_unavailable;
@@ -284,6 +322,23 @@
       return;
     }
     savePrefs({ lineId, showOutbound, showInbound });
+  });
+
+  $effect(() => {
+    const location = userLocation;
+    if (
+      !mapControls ||
+      !location ||
+      !locationActive ||
+      locationCentered ||
+      !locationAutoCenterAllowed
+    ) {
+      return;
+    }
+    if (flyIfInCity(location)) {
+      locationCentered = true;
+      locationCenteredAccuracy = location.accuracy ?? Number.POSITIVE_INFINITY;
+    }
   });
 
   $effect(() => {
@@ -352,7 +407,12 @@
   <header class="topbar">
     <div class="brand">
       <h1>OpenBahía</h1>
-      <p>Colectivos de Bahía Blanca</p>
+      <p>
+        Colectivos de Bahía Blanca ·
+        <a href="https://github.com/hatemecha/openbahia-gps" target="_blank" rel="noreferrer"
+          >Código fuente</a
+        >
+      </p>
     </div>
     <div class="controls">
       <label class="line-select" for="line-select">
@@ -420,6 +480,9 @@
             }
           }}
           onUserPan={() => {
+            if (locationActive) {
+              locationAutoCenterAllowed = false;
+            }
             if (follow) {
               followPaused = true;
             }
@@ -526,11 +589,10 @@
         >
       {/if}
     </div>
+    {#if locationNote}
+      <p class="location-status" role="status">{locationNote}</p>
+    {/if}
   </main>
-
-  {#if locationNote}
-    <p class="banner" role="status">{locationNote}</p>
-  {/if}
 
   {#if loadFailed && vehicles.length === 0}
     <p class="banner error">

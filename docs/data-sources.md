@@ -1,6 +1,6 @@
 # Proveniencia de datos
 
-El código de este repositorio es **AGPL-3.0**. Eso no convierte en redistribuibles los datos de terceros que el runtime cachea.
+El código de este repositorio es **AGPL-3.0-only**. Eso no convierte en redistribuibles los datos de terceros que el runtime cachea.
 
 | Capa | Origen | Licencia conocida | Notas |
 | --- | --- | --- | --- |

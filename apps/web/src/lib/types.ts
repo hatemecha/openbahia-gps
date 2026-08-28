@@ -46,7 +46,7 @@ export interface StopsResponse {
 export interface MapControls {
   zoomIn: () => void;
   zoomOut: () => void;
-  flyTo: (longitude: number, latitude: number) => void;
+  flyTo: (longitude: number, latitude: number, accuracy?: number) => void;
   fitLine: () => void;
 }
 

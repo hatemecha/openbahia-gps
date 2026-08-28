@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createLocationWatch } from './location';
+import {
+  createLocationWatch,
+  isNavigationReadyLocation,
+  MAX_TRUSTED_LOCATION_ACCURACY_M,
+} from './location';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -24,12 +28,12 @@ function mockGeolocation() {
     watches,
     watchPosition,
     clearWatch,
-    emit(id: number, latitude: number, longitude: number) {
+    emit(id: number, latitude: number, longitude: number, accuracy = 12) {
       watches.get(id)?.success({
         coords: {
           latitude,
           longitude,
-          accuracy: 12,
+          accuracy,
           altitude: null,
           altitudeAccuracy: null,
           heading: null,
@@ -42,6 +46,15 @@ function mockGeolocation() {
 }
 
 describe('createLocationWatch', () => {
+  it('separates a visible location from navigation-grade precision', () => {
+    expect(
+      isNavigationReadyLocation({ latitude: -38.7183, longitude: -62.2663, accuracy: 18 }),
+    ).toBe(true);
+    expect(
+      isNavigationReadyLocation({ latitude: -38.7183, longitude: -62.2663, accuracy: 31 }),
+    ).toBe(false);
+  });
+
   it('is inactive until started and creates no marker payload', () => {
     const geo = mockGeolocation();
     const fixes: Array<{ latitude: number; longitude: number }> = [];
@@ -64,8 +77,30 @@ describe('createLocationWatch', () => {
     watch.start();
     expect(watch.isActive()).toBe(true);
     expect(geo.watchPosition).toHaveBeenCalledTimes(1);
+    expect(geo.watchPosition).toHaveBeenCalledWith(expect.any(Function), expect.any(Function), {
+      enableHighAccuracy: true,
+      timeout: 20_000,
+      maximumAge: 0,
+    });
     geo.emit(1, -38.7183, -62.2663);
     expect(fixes).toEqual([{ latitude: -38.7183, longitude: -62.2663, accuracy: 12 }]);
+  });
+
+  it('waits for a precise fix instead of presenting a coarse network location', () => {
+    const geo = mockGeolocation();
+    const fixes: Array<{ latitude: number; longitude: number }> = [];
+    const imprecise: number[] = [];
+    const watch = createLocationWatch({
+      onFix: (location) => fixes.push(location),
+      onImprecise: (location) => imprecise.push(location.accuracy ?? 0),
+      onError: () => undefined,
+    });
+    watch.start();
+    geo.emit(1, -38.7183, -62.2663, MAX_TRUSTED_LOCATION_ACCURACY_M + 1);
+    expect(fixes).toEqual([]);
+    expect(imprecise).toEqual([MAX_TRUSTED_LOCATION_ACCURACY_M + 1]);
+    geo.emit(1, -38.7184, -62.2664, 18);
+    expect(fixes).toEqual([{ latitude: -38.7184, longitude: -62.2664, accuracy: 18 }]);
   });
 
   it('clears the watch and stops reporting when disabled', () => {

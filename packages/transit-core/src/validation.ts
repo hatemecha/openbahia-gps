@@ -3,8 +3,9 @@ import { haversineMeters, isInBahiaBlancaIngest } from './geo.js';
 import { assertNever } from './types.js';
 
 export const GPS_FUTURE_SLACK_MS = 5 * 60_000;
-export const GPS_JUMP_METERS = 2_500;
-export const GPS_JUMP_WINDOW_MS = 20_000;
+export const GPS_POSITION_ERROR_M = 120;
+export const GPS_MAX_PLAUSIBLE_SPEED_MPS = 45;
+export const GPS_JUMP_WINDOW_MS = 2 * 60_000;
 export const STATIC_SCHEMA_VERSION = 2;
 export const LINE_ID_PATTERN = /^[0-9A-Za-z][0-9A-Za-z-]{0,31}$/;
 
@@ -41,7 +42,13 @@ export function classifyGpsObservation(args: {
   }
   if (args.previous) {
     const dt = observed - args.previous.at;
-    if (dt >= 0 && dt < GPS_JUMP_WINDOW_MS && haversineMeters(args.previous.point, point) > GPS_JUMP_METERS) {
+    const plausibleDistance =
+      GPS_POSITION_ERROR_M + GPS_MAX_PLAUSIBLE_SPEED_MPS * Math.max(0, dt / 1000);
+    if (
+      dt >= 0 &&
+      dt < GPS_JUMP_WINDOW_MS &&
+      haversineMeters(args.previous.point, point) > plausibleDistance
+    ) {
       return 'jump';
     }
   }

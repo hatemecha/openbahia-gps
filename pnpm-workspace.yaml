@@ -3,6 +3,10 @@ packages:
   - 'packages/*'
   - 'providers/*'
 
+overrides:
+  # localtunnel 2 pins vulnerable axios 0.21; 0.33 keeps its API and patches known high issues.
+  'localtunnel>axios': 0.33.0
+
 onlyBuiltDependencies:
   - esbuild
 allowBuilds:

@@ -269,9 +269,9 @@ describe('LineRealtimeManager / VehicleHub', () => {
     }
   });
 
-  it('filters fresh GPSBahia fixes that are clearly outside the selected route', async () => {
+  it('filters fresh fixes outside the trusted route corridor', async () => {
     const now = Date.parse('2026-08-19T12:00:00.000Z');
-    const rawLatitude = -38.72 + 900 / 111_320;
+    const rawLatitude = -38.72 + 100 / 111_320;
     const provider: RealtimeProvider = {
       id: 'gpsbahia',
       async isAvailable() {

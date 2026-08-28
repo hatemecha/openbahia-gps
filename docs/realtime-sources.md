@@ -123,7 +123,7 @@ No pedimos credenciales ni acceso especial. Si el contrato público cambia, el p
 | Dependencia | Contrato municipal |
 | Riesgo | Cambios de token, WAF, o bloqueo de clientes no-browser |
 | Fecha de última verificación | 2026-08-19 |
-| Notas | OpenBahía reproduce lo que un navegador público ya hace, con polling por demanda (líneas activas / 10 s, máximo 8, idle 120 s) |
+| Notas | OpenBahía reproduce lo que un navegador público ya hace, con polling por demanda (líneas activas / 5 s, máximo 8, idle 120 s) |
 
 ---
 

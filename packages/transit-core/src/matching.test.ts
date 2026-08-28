@@ -131,7 +131,7 @@ describe('route matching', () => {
     expect(match?.distanceFromRouteMeters).toBeLessThan(20);
   });
 
-  it('keeps provider outbound when inbound polyline is closer', () => {
+  it('overrides a stale provider direction when heading clearly matches the opposite route', () => {
     const match = matchVehicleToRoutes(
       {
         latitude: -38.72015,
@@ -142,12 +142,12 @@ describe('route matching', () => {
       },
       [outbound, inbound],
     );
-    expect(match?.routeId).toBe('out');
-    expect(match?.direction).toBe('outbound');
-    expect(match?.assignmentSource).toBe('provider');
+    expect(match?.routeId).toBe('in');
+    expect(match?.direction).toBe('inbound');
+    expect(match?.assignmentSource).toBe('map-matching');
   });
 
-  it('does not flip to inbound when provider says outbound but only inbound route exists', () => {
+  it('uses the available inbound route when the provider direction is stale', () => {
     const match = matchVehicleToRoutes(
       {
         latitude: -38.72015,
@@ -158,10 +158,12 @@ describe('route matching', () => {
       },
       [inbound],
     );
-    expect(match).toBeNull();
+    expect(match?.routeId).toBe('in');
+    expect(match?.direction).toBe('inbound');
+    expect(match?.assignmentSource).toBe('map-matching');
   });
 
-  it('does not let heading override provider ida when both polylines are candidates', () => {
+  it('lets a clear heading contradiction override provider ida end to end', () => {
     const match = matchVehicleToRoutes(
       {
         latitude: -38.72015,
@@ -172,9 +174,9 @@ describe('route matching', () => {
       },
       [outbound, inbound],
     );
-    expect(match?.routeId).toBe('out');
-    expect(match?.direction).toBe('outbound');
-    expect(match?.assignmentSource).toBe('provider');
+    expect(match?.routeId).toBe('in');
+    expect(match?.direction).toBe('inbound');
+    expect(match?.assignmentSource).toBe('map-matching');
 
     const vehicle = {
       vehicleId: 'M-stale-ida',
@@ -194,7 +196,7 @@ describe('route matching', () => {
       routes: [outbound, inbound],
       stops: [],
     });
-    expect(enriched.direction).toBe('outbound');
+    expect(enriched.direction).toBe('inbound');
   });
 
   it('keeps drawing the snapped position under GPS noise once it was snapped', () => {

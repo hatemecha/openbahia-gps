@@ -6,6 +6,7 @@
     directionSpokenLabel,
     isDirectionVisible,
     markerDirectionClass,
+    markerPresentationClassName,
   } from '$lib/direction-visibility';
   import { createRouteArrowImage, createStopIconImage } from '$lib/map-icons';
   import type { ClientLocation } from '$lib/location';
@@ -97,13 +98,26 @@
     const dot = document.createElement('span');
     dot.className = 'bus-dot';
     dot.textContent = label;
-    button.append(dot);
+    const arrow = document.createElement('span');
+    arrow.className = 'bus-arrow';
+    arrow.setAttribute('aria-hidden', 'true');
+    button.append(dot, arrow);
     return button;
   }
 
-  function paintMarker(el: HTMLElement, vehicle: VehiclePosition, selected: boolean): void {
-    const dir = markerDirectionClass(vehicle.direction);
-    el.className = `bus-marker ${dir}${selected ? ' selected' : ''}`;
+  function paintMarker(
+    el: HTMLElement,
+    vehicle: VehiclePosition,
+    selected: boolean,
+    screenBearing?: number,
+  ): void {
+    el.className = markerPresentationClassName(el.className, vehicle.direction, selected);
+    el.classList.toggle('no-bearing', screenBearing === undefined);
+    if (screenBearing !== undefined) {
+      el.style.setProperty('--bus-bearing', `${screenBearing}deg`);
+    } else {
+      el.style.removeProperty('--bus-bearing');
+    }
     el.setAttribute(
       'aria-label',
       `Colectivo ${vehicle.lineId ?? vehicle.routeId ?? '—'} ${directionSpokenLabel(vehicle.direction)} unidad ${vehicle.vehicleId}`,
@@ -216,10 +230,31 @@
     debugSource?.setData(matchDebugGeoJson() as never);
   }
 
-  function createUserMarkerElement(): HTMLDivElement {
+  function userLocationLabel(location: ClientLocation): string {
+    return location.accuracy === undefined
+      ? 'Tu ubicación'
+      : `Tu ubicación, precisión aproximada ${Math.round(location.accuracy)} metros`;
+  }
+
+  function userAccuracyDiameter(location: ClientLocation): number {
+    if (!map || location.accuracy === undefined) {
+      return 28;
+    }
+    const metersPerPixel =
+      (156_543.03392 * Math.cos((location.latitude * Math.PI) / 180)) / 2 ** map.getZoom();
+    const diameter = (2 * location.accuracy) / Math.max(metersPerPixel, 0.01);
+    return Math.min(240, Math.max(28, diameter));
+  }
+
+  function paintUserMarker(el: HTMLElement, location: ClientLocation): void {
+    el.setAttribute('aria-label', userLocationLabel(location));
+    el.style.setProperty('--user-accuracy-diameter', `${userAccuracyDiameter(location)}px`);
+  }
+
+  function createUserMarkerElement(location: ClientLocation): HTMLDivElement {
     const root = document.createElement('div');
     root.className = 'user-marker';
-    root.setAttribute('aria-label', 'Tu ubicación');
+    paintUserMarker(root, location);
     const halo = document.createElement('span');
     halo.className = 'user-marker-halo';
     const dot = document.createElement('span');
@@ -238,11 +273,15 @@
       return;
     }
     if (!userMarker) {
-      userMarker = new maplibre.Marker({ element: createUserMarkerElement(), anchor: 'center' })
+      userMarker = new maplibre.Marker({
+        element: createUserMarkerElement(userLocation),
+        anchor: 'center',
+      })
         .setLngLat([userLocation.longitude, userLocation.latitude])
         .addTo(map);
       return;
     }
+    paintUserMarker(userMarker.getElement(), userLocation);
     userMarker.setLngLat([userLocation.longitude, userLocation.latitude]);
   }
 
@@ -319,7 +358,9 @@
       }
       marker.setLngLat([point.longitude, point.latitude]);
       const el = marker.getElement();
-      paintMarker(el, item.vehicle, selected);
+      const screenBearing =
+        point.bearing === undefined ? undefined : point.bearing - map.getBearing();
+      paintMarker(el, item.vehicle, selected, screenBearing);
       if (followVehicleId === item.vehicleId) {
         if (reducedMotion) {
           map.jumpTo({ center: [point.longitude, point.latitude], pitch: 0 });
@@ -367,6 +408,11 @@
 
   $effect(() => {
     if (!mapReady || lineRouteKey === lastFittedLine || routes.length === 0) {
+      return;
+    }
+    if (userLocation) {
+      // A late static-route response must not undo the user's location camera.
+      lastFittedLine = lineRouteKey;
       return;
     }
     lastFittedLine = lineRouteKey;
@@ -546,16 +592,27 @@
         });
         mapReady = true;
         mapFailed = false;
+        map.on('zoom', syncUserMarker);
         syncSources();
         syncUserMarker();
       });
       mapControls = {
         zoomIn: () => map?.zoomIn({ duration: reducedMotion ? 0 : 250 }),
         zoomOut: () => map?.zoomOut({ duration: reducedMotion ? 0 : 250 }),
-        flyTo: (longitude: number, latitude: number) => {
+        flyTo: (longitude: number, latitude: number, accuracy?: number) => {
+          const targetZoom =
+            accuracy === undefined
+              ? 16
+              : accuracy <= 20
+                ? 17
+                : accuracy <= 50
+                  ? 16
+                  : accuracy <= 120
+                    ? 15
+                    : 14;
           map?.easeTo({
             center: [longitude, latitude],
-            zoom: Math.max(map.getZoom(), 14),
+            zoom: Math.max(map.getZoom(), targetZoom),
             pitch: 0,
             duration: reducedMotion ? 0 : 500,
           });

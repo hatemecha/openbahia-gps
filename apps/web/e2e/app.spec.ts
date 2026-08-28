@@ -5,6 +5,10 @@ test.describe('OpenBahía mock journey', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'OpenBahía' })).toBeVisible();
     await expect(page.getByText('Colectivos de Bahía Blanca')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Código fuente' })).toHaveAttribute(
+      'href',
+      'https://github.com/hatemecha/openbahia-gps',
+    );
     const select = page.getByLabel(/colectivo querés ver/i);
     await expect(select).toBeVisible();
     await select.selectOption('503');
@@ -23,6 +27,14 @@ test.describe('OpenBahía mock journey', () => {
         timeout: 20_000,
       },
     );
+    const firstBusMarker = page.locator('.bus-marker').first();
+    await expect(firstBusMarker).toHaveClass(/maplibregl-marker/);
+    await expect(firstBusMarker).toHaveCSS('position', 'absolute');
+    await expect(firstBusMarker.locator('.bus-dot')).toHaveCSS(
+      'background-color',
+      'rgb(180, 35, 24)',
+    );
+    await expect(firstBusMarker.locator('.bus-arrow')).toBeVisible();
     await page
       .getByRole('button', { name: /unidad M-32|unidad M-18/ })
       .first()
@@ -77,16 +89,18 @@ test.describe('OpenBahía mock journey', () => {
     await expect(page.getByText(/Sin conexión/)).toBeVisible();
   });
 
-  test('keyboard can reach the line selector', async ({ page }) => {
+  test('keyboard can reach source and line selector', async ({ page }) => {
     await page.goto('/');
     await page.locator('.skip-link').focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: 'Código fuente' })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByLabel(/colectivo querés ver/i)).toBeFocused();
   });
 
   test('user location is a toggle with a distinct marker', async ({ page, context }) => {
     await context.grantPermissions(['geolocation']);
-    await context.setGeolocation({ latitude: -38.7183, longitude: -62.2663 });
+    await context.setGeolocation({ latitude: -38.742, longitude: -62.294 });
     await page.goto('/');
     const locate = page.getByRole('button', { name: 'Mostrar mi ubicación' });
     await expect(locate).toBeVisible();
@@ -98,11 +112,87 @@ test.describe('OpenBahía mock journey', () => {
       'true',
     );
     await expect(page.locator('.user-marker')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.user-marker')).toHaveAttribute(
+      'aria-label',
+      /precisión aproximada/i,
+    );
+    await expect(page.locator('.user-marker')).toHaveAttribute(
+      'style',
+      /--user-accuracy-diameter:/,
+    );
+    await expect(
+      page.getByRole('status').filter({ hasText: /Ubicación precisa|precisión aproximada/i }),
+    ).toBeVisible();
+    await expect
+      .poll(async () => {
+        const mapBox = await page
+          .getByRole('application', { name: 'Mapa de colectivos' })
+          .boundingBox();
+        const markerBox = await page.locator('.user-marker').boundingBox();
+        if (!mapBox || !markerBox) {
+          return Number.POSITIVE_INFINITY;
+        }
+        return Math.max(
+          Math.abs(markerBox.x + markerBox.width / 2 - (mapBox.x + mapBox.width / 2)),
+          Math.abs(markerBox.y + markerBox.height / 2 - (mapBox.y + mapBox.height / 2)),
+        );
+      })
+      .toBeLessThan(35);
     await page.getByRole('button', { name: 'Ocultar mi ubicación' }).click();
     await expect(page.getByRole('button', { name: 'Mostrar mi ubicación' })).toHaveAttribute(
       'aria-pressed',
       'false',
     );
     await expect(page.locator('.user-marker')).toHaveCount(0);
+  });
+
+  test('a coarse first fix still responds, centers, and reports its uncertainty', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const position = {
+        coords: {
+          latitude: -38.742,
+          longitude: -62.294,
+          accuracy: 250,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        },
+        timestamp: Date.now(),
+      } as GeolocationPosition;
+      Object.defineProperty(navigator, 'geolocation', {
+        configurable: true,
+        value: {
+          watchPosition(success: PositionCallback) {
+            window.setTimeout(() => success(position), 20);
+            return 1;
+          },
+          clearWatch() {},
+        },
+      });
+    });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Mostrar mi ubicación' }).click();
+    await expect(page.locator('.user-marker')).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole('status').filter({ hasText: /Ubicación aproximada \(±250 m\)/i }),
+    ).toBeVisible();
+    await expect
+      .poll(async () => {
+        const mapBox = await page
+          .getByRole('application', { name: 'Mapa de colectivos' })
+          .boundingBox();
+        const markerBox = await page.locator('.user-marker').boundingBox();
+        if (!mapBox || !markerBox) {
+          return Number.POSITIVE_INFINITY;
+        }
+        return Math.max(
+          Math.abs(markerBox.x + markerBox.width / 2 - (mapBox.x + mapBox.width / 2)),
+          Math.abs(markerBox.y + markerBox.height / 2 - (mapBox.y + mapBox.height / 2)),
+        );
+      })
+      .toBeLessThan(35);
   });
 });

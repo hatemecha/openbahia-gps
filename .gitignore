@@ -22,9 +22,9 @@ firebase-adminsdk*.json
 .cache
 tmp
 .pnpm-store
+/work/
 data/cache/*
 !data/cache/.gitkeep
 !data/cache/README.md
 apps/web/test-results
 apps/web/playwright-report
-

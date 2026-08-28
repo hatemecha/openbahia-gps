@@ -139,7 +139,7 @@ function shouldKeepPrevious(current: RouteMatch, resnap: RouteMatch): boolean {
   );
 }
 
-function providerAuthoritativeDirection(
+function providerReportedDirection(
   vehicle: Pick<VehiclePosition, 'direction' | 'routeAssignmentSource'>,
 ): TravelDirection | undefined {
   if (vehicle.routeAssignmentSource !== 'provider') {
@@ -150,16 +150,6 @@ function providerAuthoritativeDirection(
     return undefined;
   }
   return direction;
-}
-
-function candidateRoutesForVehicle(
-  routes: TransitRoute[],
-  providerDirection: TravelDirection | undefined,
-): TransitRoute[] {
-  if (!providerDirection) {
-    return routes;
-  }
-  return routes.filter((route) => route.direction === providerDirection);
 }
 
 export function matchVehicleToRoutes(
@@ -174,14 +164,10 @@ export function matchVehicleToRoutes(
     return null;
   }
   const point = { latitude: vehicle.latitude, longitude: vehicle.longitude };
-  const providerDirection = providerAuthoritativeDirection(vehicle);
-  const candidates = candidateRoutesForVehicle(routes, providerDirection);
-  if (candidates.length === 0) {
-    return null;
-  }
+  const providerDirection = providerReportedDirection(vehicle);
 
   let best: RouteMatch | null = null;
-  for (const route of candidates) {
+  for (const route of routes) {
     const candidate = snapToRoute(point, route, vehicle, context, 'map-matching');
     if (!candidate) {
       continue;
@@ -195,7 +181,7 @@ export function matchVehicleToRoutes(
   }
   let chosen = best;
   if (context.previous) {
-    const previousRoute = candidates.find((route) => route.id === context.previous?.routeId);
+    const previousRoute = routes.find((route) => route.id === context.previous?.routeId);
     const resnap = previousRoute
       ? snapToRoute(point, previousRoute, vehicle, context, 'map-matching')
       : null;
@@ -203,16 +189,18 @@ export function matchVehicleToRoutes(
       chosen = resnap;
     }
   }
-  const assignmentSource: RouteMatch['assignmentSource'] = providerDirection
-    ? 'provider'
-    : 'map-matching';
+  const assignmentSource: RouteMatch['assignmentSource'] =
+    providerDirection && chosen.direction === providerDirection ? 'provider' : 'map-matching';
   chosen = { ...chosen, assignmentSource };
   if (chosen.distanceFromRouteMeters > MATCH_MAX_DISTANCE_M) {
     return {
       ...chosen,
-      direction: providerDirection ?? ('unknown' satisfies TravelDirection),
+      direction:
+        assignmentSource === 'provider' && providerDirection
+          ? providerDirection
+          : ('unknown' satisfies TravelDirection),
       confidence: Math.min(chosen.confidence, 0.35),
-      assignmentSource: providerDirection ? 'provider' : 'unknown',
+      assignmentSource: assignmentSource === 'provider' ? 'provider' : 'unknown',
     };
   }
   return chosen;
@@ -284,6 +272,7 @@ export function enrichMatchedVehicle(args: {
       ? nextStopAlongRoute(route, match.progress, stops)
       : undefined;
   const providerDirection =
+    match?.assignmentSource === 'provider' &&
     vehicle.routeAssignmentSource === 'provider' &&
     vehicle.direction &&
     isDeterminedDirection(vehicle.direction)

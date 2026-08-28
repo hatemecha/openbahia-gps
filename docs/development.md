@@ -17,6 +17,21 @@ La API carga `.env` desde la raíz del monorepo y luego `apps/api/.env` si exist
 
 Al arrancar descarga (o revalida) recorridos y paradas hacia `data/cache/`. Ese directorio no se commitea.
 
+## Probar desde un celular
+
+```bash
+pnpm dev:share
+```
+
+El comando inicia API, web y un túnel HTTPS temporal. La terminal muestra:
+
+- `http://127.0.0.1:5173` para esta computadora;
+- una URL `https://…loca.lt` para el celular;
+- la contraseña temporal si LocalTunnel la solicita.
+- un QR para abrir la URL sin copiarla.
+
+No hace falta configurar IP, CORS ni certificados. `Ctrl+C` cierra los procesos iniciados por `dev:share`; un `pnpm dev` previo que haya sido reutilizado sigue bajo control de su terminal original.
+
 ## Tests
 
 ```bash

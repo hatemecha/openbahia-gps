@@ -32,13 +32,46 @@ function lastHistoryState(value: unknown): Record<string, unknown> | null {
   }
   const history = record.history;
   if (Array.isArray(history) && history.length > 0) {
-    return asRecord(history[history.length - 1]);
+    return latestDatedRecord(history);
   }
   if (history && typeof history === 'object') {
     const values = Object.values(history as Record<string, unknown>);
-    return asRecord(values[values.length - 1]);
+    return latestDatedRecord(values);
   }
   return asRecord(record);
+}
+
+function latestDatedRecord(values: unknown[]): Record<string, unknown> | null {
+  let latest: Record<string, unknown> | null = null;
+  let latestDate = Number.NEGATIVE_INFINITY;
+  for (const value of values) {
+    const record = asRecord(value);
+    if (!record) {
+      continue;
+    }
+    const date = typeof record.date === 'number' ? record.date : Number(record.date);
+    if (!Number.isFinite(date)) {
+      continue;
+    }
+    if (date >= latestDate) {
+      latest = record;
+      latestDate = date;
+    }
+  }
+  return latest;
+}
+
+function routeIntersectionState(value: unknown): Record<string, unknown> | null {
+  const bus = asRecord(value);
+  const route = asRecord(bus?.route);
+  if (!route || typeof route.id !== 'string' || typeof route.item !== 'string') {
+    return null;
+  }
+  const angle = typeof route.angle === 'number' ? route.angle : Number(route.angle);
+  const date = typeof route.date === 'number' ? route.date : Number(route.date);
+  return parseLatLng(route.position) && Number.isFinite(angle) && Number.isFinite(date)
+    ? route
+    : null;
 }
 
 function parseLatLng(value: unknown): { latitude: number; longitude: number } | null {
@@ -68,23 +101,25 @@ export function parseGpsBusSnapshot(
   for (const [rawRouteId, buses] of lineEntries) {
     const line = lineByRawRouteId(rawRouteId);
     for (const [vehicleId, bus] of asEntries(buses)) {
-      const last = lastHistoryState(bus);
-      if (!last) {
+      const lastHistory = lastHistoryState(bus);
+      if (!lastHistory) {
         continue;
       }
-      const position = parseLatLng(last.position);
+      // ColectivosYa renders the backend-computed route intersection when present.
+      const displayedState = routeIntersectionState(bus) ?? lastHistory;
+      const position = parseLatLng(displayedState.position);
       if (!position) {
         continue;
       }
-      const observedAt = parseTimestampToIso(last.date, Date.parse(receivedAt));
+      const observedAt = parseTimestampToIso(lastHistory.date, Date.parse(receivedAt));
       if (!observedAt) {
         continue;
       }
       const bearingRaw =
-        typeof last.angle === 'number'
-          ? last.angle
-          : typeof last.angle === 'string'
-            ? Number(last.angle)
+        typeof displayedState.angle === 'number'
+          ? displayedState.angle
+          : typeof displayedState.angle === 'string'
+            ? Number(displayedState.angle)
             : undefined;
       const parsed = parseVehiclePosition({
         vehicleId,
